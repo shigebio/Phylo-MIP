@@ -1,0 +1,10 @@
+services:
+  app:
+    image: name_taxonomy_create_tree #仮名、プログラム名にあわせる
+    build: .
+    volumes:
+      - ./app/name_taxonomy_create_tree.py:/app/name_taxonomy_create_tree.py
+      - ./input:/input
+      - ./output:/output
+    stdin_open: true
+    tty: true
