@@ -1,12 +1,11 @@
 # MICUM(Moleculer Identification pipeline Computational Unit Manager：仮称)
----
 ## これはなに
 - 系統解析～種の判定を簡易的かつほぼ自動的に行うことを目標に作成したパイプラインツールです
 - Dockerを使用しており、使用者の環境に依存しません
 - 使用用途
   - 環境DNA
   -
----
+
 ## 入力ファイルの準備
 ### 入力ファイル例
 CSV形式です
@@ -42,16 +41,16 @@ CSV形式です
     3. 作成したDBに対して検索をかけたい配列のFASTAファイルでBLAST検索
         ```
         $ blastn -db {2.で作成したDB名}.nc -query {検索かけたいFASTAファイル名} -out {出力したいファイル名}.csv -outfmt "10 qseqid sseqid sallacc length pident mismatch gapopen qstart qend sstart send evalue bitscore qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sseqid,sallacc,length,pident,mismatch,gapopen,qstart,qend,sstart,send,evalue,bitscore,qseq' {出力したいファイル名}.csv
-    - `-outfmt "10 qseqid sseqid sallacc length pident mismatch gapopen qstart qend sstart send evalue bitscore qseq"`と`sed -i '1i qseqid,sseqid,sallacc,length,pident,mismatch,gapopen,qstart,qend,sstart,send,evalue,bitscore,qseq'`の項目と順番は揃えてください
+    - `-outfmt "10 xx yy"`と`sed -i '1i xx, yy'`の項目と順番は揃えてください
     - 最低限、先述の4項目があれば動きます
 ## プログラムを使う
 1. Dockerの導入
      - https://docs.docker.jp/engine/getstarted/step_one.html
-2. リポジトリのクローン
-     - クローンする場所は、デスクトップなどファイルシステムからアクセスしやすい場所がおすすめです
-  `$ git clone https://github.com/shigebio/MICUM`
-       - 初見だとgit回りの設定が面倒だったりしそうなので、ファイル配布したり、docker imageだけ配るなど方法考えます
-1. クローンしたファイルに移動
+2. リポジトリをDL or クローン
+     - DL or クローンする場所は、デスクトップなどファイルシステムからアクセスしやすい場所がおすすめです
+     - クローンする場合
+     `$ git clone https://github.com/shigebio/MICUM`
+3. クローンしたファイルに移動
   `$ cd /{path to MICUM}/MICUM`
        - クローンした場所にファイルが作られるので、`$ cd MICUM`でも行けると思います
 1. Docker環境のビルド
