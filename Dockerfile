@@ -92,5 +92,8 @@ RUN git clone https://github.com/Pas-Kapli/mptp.git /app/mptp && \
     make && \
     make install
 
+# inputファイル
+RUN mkdir -p /input /output
+
 # ワーキングディレクトリの設定
 WORKDIR /app
