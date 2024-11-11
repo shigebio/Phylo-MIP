@@ -180,7 +180,7 @@ def run_mafft(vsearch_output, output_aligned):
     subprocess.run(mafft_cmd, shell=True, check=True)
 
 # FastTree
-def run_fasttree(input_aligned, output_tree, method="ML", bootstrap=0, gamma=False, outgroup=None):
+def run_fasttree(input_aligned, output_tree, method="NJ", bootstrap=0, gamma=False, outgroup=None):
     fasttree_cmd = "fasttree -nt"
 
     if method == "ML":
