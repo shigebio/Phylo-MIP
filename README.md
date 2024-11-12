@@ -58,9 +58,12 @@ CSV形式です
     $ sudo docker-compose build
     # 後述するコンテナの立ち上げと同時に行う場合
     $ sudo docker-compose up --build -d
+    # おそらくこれだとbuild一瞬？
+    $ sudo docker pull shigebio/name_taxonomy_create_tree
 2. コンテナの起動
   `$sudo docker-compose up -d`
      - ビルドした環境を起動しています
+     - 'sudo docker-compose up --build -d'やった場合は、やらなくていいです
 1. コンテナ内に移動
   `$ sudo docker-compose exec -it app /bin/bash`
      - `root@ca174dd9ea32:/app# `コンソールがこんなかんじになれば大丈夫です
@@ -79,5 +82,9 @@ CSV形式です
            - `--bootstrap`：ブートストラップ値の指定。デフォルトでは`250`になっています。
            - `--gamma`：ガンマ分布を適用するかどうか。デフォルトでは`False`になっています。
            - `--outgroup`：外群の指定。デフォルトでは`None`になっています。
+1. コンテナの停止
+   - `$ sudo docker-compose down`
+     - ずっとコンテナ動かしているとメモリ消費しそうなので、停止させておくとよさそうです
+     - upで再起動→手順2から再開できます
 # 出力
 - 後で書きます
