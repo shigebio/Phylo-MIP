@@ -75,8 +75,8 @@ CSV形式です
        - `python3 name_taxonomy_create_tree.py {入力するCSVファイル名} {出力したいファイル名} --tree {各種オプション}`
        - 例：`python3 name_taxonomy_create_tree.py your_input.csv output --tree --method NJ --bootstrap 250`
        - オプション
-           - `--method`：系統樹作成手法の選択。デフォルトでは`ML`になっています。`ML`と`NJ`が選べます
-           - `--bootstrap`：ブートストラップ値の指定。デフォルトでは`0`になっています。
+           - `--method`：系統樹作成手法の選択。デフォルトでは`NJ`になっています。`ML`と`NJ`が選べます
+           - `--bootstrap`：ブートストラップ値の指定。デフォルトでは`250`になっています。
            - `--gamma`：ガンマ分布を適用するかどうか。デフォルトでは`False`になっています。
            - `--outgroup`：外群の指定。デフォルトでは`None`になっています。
 # 出力
