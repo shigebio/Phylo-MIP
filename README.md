@@ -63,7 +63,7 @@ CSV形式です
 2. コンテナの起動
   `$sudo docker-compose up -d`
      - ビルドした環境を起動しています
-     - 'sudo docker-compose up --build -d'やった場合は、やらなくていいです
+     - `sudo docker-compose up --build -d`やった場合は、やらなくていいです
 1. コンテナ内に移動
   `$ sudo docker-compose exec -it app /bin/bash`
      - `root@ca174dd9ea32:/app# `コンソールがこんなかんじになれば大丈夫です
