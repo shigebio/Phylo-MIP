@@ -4,7 +4,6 @@
 - Dockerを使用しており、使用者の環境に依存しません
 - 使用用途
   - 環境DNA
-  -
 
 ## 入力ファイルの準備
 ### 入力ファイル例
@@ -53,6 +52,9 @@ CSV形式です
 3. クローンしたファイルに移動
   `$ cd /{path to MICUM}/MICUM`
        - クローンした場所にファイルが作られるので、`$ cd MICUM`でも行けると思います
+1. Dockerの起動
+   ```
+   $ sudo service docker start
 1. Docker環境のビルド
     ```
     $ sudo docker-compose build
