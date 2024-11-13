@@ -60,6 +60,8 @@ CSV形式です
     $ sudo docker-compose up --build -d
     # おそらくこれだとbuild一瞬？
     $ sudo docker pull shigebio/name_taxonomy_create_tree
+    ```
+  - イメージのDocker hubレポジトリ：[shigebio/name_taxonomy_create_tree](https://hub.docker.com/r/shigebio/name_taxonomy_create_tree)
 2. コンテナの起動
   `$sudo docker-compose up -d`
      - ビルドした環境を起動しています
