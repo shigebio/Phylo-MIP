@@ -183,10 +183,13 @@ def run_mafft(vsearch_output, output_aligned):
 def run_fasttree(input_aligned, output_tree, method="NJ", bootstrap=250, gamma=False, outgroup=None):
     fasttree_cmd = "fasttree -nt"
 
-    if method == "ML":
-        fasttree_cmd += " -ml"
-    elif method == "NJ":
+    if method == "NJ":
         fasttree_cmd += " -nj"
+    elif method == "ML":
+        # ML法はデフォルト
+        pass
+    else:
+        raise ValueError(f"Invalid method '{method}'. Choose 'ML' or 'NJ'.")
 
     if bootstrap > 0:
         fasttree_cmd += f" -boot {bootstrap}"
