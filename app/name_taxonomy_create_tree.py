@@ -3,6 +3,8 @@ from Bio import Entrez, Phylo
 import requests
 import sys
 import time
+from datetime import datetime
+import random
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import argparse
@@ -15,17 +17,25 @@ from ete3 import NodeStyle
 
 # NCBI API setup:NCBIに怒られないか心配な人は自分のメールアドレスに変更
 Entrez.email = "your_email@example.com"
+default_seed = random.randint(1, 10**6)
 
 # オプション引数をパース
-parser = argparse.ArgumentParser(description="Process CSV and generate phylogenetic trees")
+parser = argparse.ArgumentParser(description="Process Sequence file and generate phylogenetic trees")
 parser.add_argument('input_csv', help="Input CSV file (relative path to ../input)")
 parser.add_argument('output_base', help="Output base name (relative path to ../output)")
 parser.add_argument('--top', type=int, default=1, choices=range(1, 6), help="Number of top results to retain per qseqid (default: 1, range: 1-5)")
 parser.add_argument('--tree', help="Generate phylogenetic tree", action='store_true')
-parser.add_argument('--method', default="ML", choices=["ML", "NJ"], help="Tree generation method: ML or NJ")
-parser.add_argument('--bootstrap', type=int, default=0, help="Number of bootstrap replicates")
-parser.add_argument('--gamma', action='store_true', help="Use gamma model")
-parser.add_argument('--outgroup', help="Outgroup for tree")
+tree_group = parser.add_argument_group('FastTree options', 'Options for FastTree analysis')
+tree_group.add_argument('--method', default="NJ", choices=["NJ", "ML"], help="Tree generation method: NJ or ML")
+tree_group.add_argument('--bootstrap', type=int, default=0, help="Number of bootstrap replicates")
+tree_group.add_argument('--gamma', action='store_true', help="Use gamma model")
+tree_group.add_argument('--outgroup', help="Outgroup for tree")
+parser.add_argument('--bptp', action='store_true', help='Enable bPTP options')
+bptp_group = parser.add_argument_group('bPTP options', 'Options for bPTP analysis')
+bptp_group.add_argument('--mcmc', type=int, default=100000, help='Number of MCMC iterations (default: 100000)')
+bptp_group.add_argument('--thinning', type=int, default=100, help='Thinning value (default: 100)')
+bptp_group.add_argument('--burnin', type=float, default=0.1, help='Burn-in fraction (default: 0.1)')
+bptp_group.add_argument('--seed', type=int, default=default_seed, help='Random seed (default: {default_seed})')
 
 args = parser.parse_args()
 
@@ -206,7 +216,7 @@ def run_fasttree(input_aligned, output_tree, method="NJ", bootstrap=250, gamma=F
     print(f"Phylogenetic tree saved to {output_tree}")
 
 # bPTP
-def run_bptp(tree_file):
+def run_bptp(tree_file, mcmc, thinning, burnin, seed):
     try:
         # bPTP.pyのパスを構築
         bptp_path = os.path.join('/app/PTP/bin', 'bPTP.py')
@@ -217,14 +227,22 @@ def run_bptp(tree_file):
         os.makedirs(output_dir, exist_ok=True)  # ディレクトリを作成（存在する場合はスキップ）
 
         # 出力ファイル名を設定
-        output_file = os.path.join(output_dir, 'output_base_tree_bptp_output.txt')  # 出力ファイルのパス
-        seed = '1234'  # 任意のシード値を設定
+        output_file = os.path.join(output_dir, 'output_base_tree_bptp_output.txt')
 
-        # bPTP.pyを実行
-        subprocess.run(
-            ['xvfb-run', '-a', 'python3', bptp_path, '-t', tree_file, '-o', output_file, '-s', seed],
-            check=True
-        )
+        # bPTP.pyを実行するコマンドを構築
+        bptp_command = [
+            'xvfb-run', '-a', 'python3', bptp_path,
+            '-t', tree_file,
+            '-o', output_file,
+            '-s', str(seed),
+            '-i', str(mcmc),
+            '-n', str(thinning),
+            '-b', str(burnin)
+        ]
+
+        # コマンドを実行
+        print(f"Running bPTP with command: {' '.join(bptp_command)}")
+        subprocess.run(bptp_command, check=True)
         print('bPTP analysis complete.')
     except subprocess.CalledProcessError as e:
         print(f"Error running bPTP.py: {e}")
@@ -311,7 +329,13 @@ if args.tree:
     nexus_output = os.path.join("../output/", tree_file)
 
     # Run bPTP
-    run_bptp(nexus_output)
+    mcmc = args.mcmc
+    thinning = args.thinning
+    burnin = args.burnin
+    seed = args.seed
+
+    print(f"MCMC: {mcmc}, Thinning: {thinning}, Burn-in: {burnin}, Seed: {seed}")
+    run_bptp(nexus_output, mcmc, thinning, burnin, seed)
 
     # Run PTP
     # 保留
