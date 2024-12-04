@@ -24,13 +24,14 @@ parser = argparse.ArgumentParser(description="Process Sequence file and generate
 parser.add_argument('input_csv', help="Input CSV file (relative path to ../input)")
 parser.add_argument('output_base', help="Output base name (relative path to ../output)")
 parser.add_argument('--top', type=int, default=1, choices=range(1, 6), help="Number of top results to retain per qseqid (default: 1, range: 1-5)")
+parser.add_argument('--onlyp', action='store_true', help="Run only phylogenic analysis")
 parser.add_argument('--tree', help="Generate phylogenetic tree", action='store_true')
 tree_group = parser.add_argument_group('FastTree options', 'Options for FastTree analysis')
 tree_group.add_argument('--method', default="NJ", choices=["NJ", "ML"], help="Tree generation method: NJ or ML")
 tree_group.add_argument('--bootstrap', type=int, default=0, help="Number of bootstrap replicates")
-tree_group.add_argument('--gamma', action='store_true', help="Use gamma model")
+tree_group.add_argument('--gamma', help="Use gamma model", action='store_true')
 tree_group.add_argument('--outgroup', help="Outgroup for tree")
-parser.add_argument('--bptp', action='store_true', help='Enable bPTP options')
+parser.add_argument('--bptp', help='Enable bPTP options', action='store_true')
 bptp_group = parser.add_argument_group('bPTP options', 'Options for bPTP analysis')
 bptp_group.add_argument('--mcmc', type=int, default=100000, help='Number of MCMC iterations (default: 100000)')
 bptp_group.add_argument('--thinning', type=int, default=100, help='Thinning value (default: 100)')
@@ -162,6 +163,31 @@ def process_with_progress():
 
     print()  # End progress tracking
 
+import pandas as pd
+
+def csv_to_fasta(input_csv, output_fasta):
+    # CSVを読み込む
+    df = pd.read_csv(input_csv)
+
+    # 必須列が存在するか確認
+    if not {'qseqid', 'qseq'}.issubset(df.columns): # 最低限OTU名が一意になるようにqseqの存在確認
+        raise ValueError("Input CSV must contain 'qseqid' and 'qseq' columns.")
+
+    with open(output_fasta, 'w') as fasta_file:
+        for _, row in df.iterrows():
+            # OTU名を生成
+            otu_name_parts = [
+                str(row[col]).replace(" ", "_").replace(",", "_").replace(".", "_").replace("-", "_")
+                for col in df.columns if col != 'qseq' and pd.notna(row[col])
+            ]
+            otu_name = "_".join(otu_name_parts)
+
+            # 配列情報を取得
+            sequence = row['qseq']
+
+            # FASTAエントリを書き込む
+            fasta_file.write(f">{otu_name}\n{sequence}\n")
+
 # VSEARCH
 def run_vsearch(input_fasta, output_centroids):
     # 出力ディレクトリを指定
@@ -292,18 +318,23 @@ def run_mptp(tree_file):
     except subprocess.CalledProcessError as e:
         print(f"Error running mPTP: {e}")
 
+# 系統解析以降だけ実行するための分岐
+if args.onlyp:
+    input_csv = os.path.join('..', 'input', f"{args.input_csv}")
+    fasta_filename = os.path.join('..', 'output', f"{args.output_base}.fasta")
+    csv_to_fasta(input_csv, fasta_filename)
+else:
+    # 分類データの取得
+    process_with_progress()
 
-# 進捗表示関数の実行
-process_with_progress()
+    # 加工後のFASTAとCSVの書き出し
+    fasta_filename = os.path.join('..', 'output', f"{args.output_base}.fasta")
+    with open(fasta_filename, "w") as fasta_file:
+        fasta_file.writelines(fasta_list)
 
-# 加工後のFASTAとCSVの書き出し
-fasta_filename = os.path.join('..', 'output', f"{args.output_base}.fasta")
-with open(fasta_filename, "w") as fasta_file:
-    fasta_file.writelines(fasta_list)
-
-csv_filename = os.path.join('..', 'output', f"{args.output_base}.csv")
-output_df = pd.DataFrame(csv_data, columns=["qseqid", "accessionID", "taxonomic_name", "pident", "qseq", "source"])
-output_df.to_csv(csv_filename, index=False)
+    csv_filename = os.path.join('..', 'output', f"{args.output_base}.csv")
+    output_df = pd.DataFrame(csv_data, columns=["qseqid", "accessionID", "taxonomic_name", "pident", "qseq", "source"])
+    output_df.to_csv(csv_filename, index=False)
 
 # --treeオプションがあるとき：VSEARCH→MAFFT→FastTreeで系統樹作成
 if args.tree:
