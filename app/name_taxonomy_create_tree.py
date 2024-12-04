@@ -72,6 +72,9 @@ def fetch_ncbi_data(accessionID):
         except Exception as e:
             print(f"NCBI API request failed: {e}. Retrying... ({attempt + 1}/3)")
             time.sleep(2 ** attempt)
+
+    # 最終的に失敗した場合、エラーメッセージを返す代わりにNoneを返す
+    print(f"Failed to fetch data for accession ID: {accessionID}")
     return None
 
 # GBIFから分類群データ取得する用関数
@@ -136,7 +139,11 @@ def process_row(index, row):
         # accessionID(sallacc)からNCBIで種名取得
         records = fetch_ncbi_data(accessionID)
         if not records:
-            return None, None
+            # NCBIから情報を取得できなかった場合
+            taxonomic_name = "Uncertain_taxonomy"  # 不確定な分類群
+            fasta_entry = f">{sanitize_otu_name(f'{qseqid}_{accessionID}_{taxonomic_name}_{pident:.2f}')}\n{qseq}\n"
+            csv_entry = [qseqid, accessionID, 'Unknown', 'Unknown', taxonomic_name, pident, qseq, 'NCBI Failed']
+            return fasta_entry, csv_entry
 
         organism_name = records[0]['GBSeq_organism']
 
@@ -161,26 +168,32 @@ def process_row(index, row):
 
         taxonomic_name = "Low_Identity_Match"
         if pident >= 98.00:
-            taxonomic_name = taxonomic_info.get('species')
+            taxonomic_name = taxonomic_info.get('species', 'Uncertain_taxonomy')
         elif 95.00 <= pident < 98.00:
-            taxonomic_name = taxonomic_info.get('genus')
+            taxonomic_name = taxonomic_info.get('genus', 'Uncertain_taxonomy')
         elif 90.00 <= pident < 95.00:
-            taxonomic_name = taxonomic_info.get('family')
+            taxonomic_name = taxonomic_info.get('family', 'Uncertain_taxonomy')
         elif 85.00 <= pident < 90.00:
-            taxonomic_name = taxonomic_info.get('order')
+            taxonomic_name = taxonomic_info.get('order', 'Uncertain_taxonomy')
 
-        order = taxonomic_info.get('order')
-        class_name = taxonomic_info.get('class')
+        order = taxonomic_info.get('order', 'Unknown')
+        class_name = taxonomic_info.get('class', 'Unknown')
 
         # FASTAエントリーとCSVエントリーを作成
         fasta_entry = f">{sanitize_otu_name(f'{qseqid}_{accessionID}_{taxonomic_name}_{pident:.2f}')}\n{qseq}\n"
         csv_entry = [qseqid, accessionID, class_name, order, taxonomic_name, pident, qseq, source]
 
+        print(f"Processing row {index + 1} of {len(df)}")
+
         return fasta_entry, csv_entry
 
     except Exception as e:
         print(f"Error processing row {index + 1}: {e}")
-        return None, None
+        # エラー時には不確定な分類群名を使用
+        taxonomic_name = "Uncertain_taxonomy"
+        fasta_entry = f">{sanitize_otu_name(f'{qseqid}_{accessionID}_{taxonomic_name}_{pident:.2f}')}\n{qseq}\n"
+        csv_entry = [qseqid, accessionID, 'Unknown', 'Unknown', taxonomic_name, pident, qseq, 'Error']
+        return fasta_entry, csv_entry
 
 # APIリクエストの進捗表示用
 def process_with_progress(filter_class=None):
