@@ -136,9 +136,11 @@ def process_row(index, row):
         elif 85.00 <= pident < 90.00:
             taxonomic_name = taxonomic_info.get('order')
 
+        order = taxonomic_info.get('order')
+
         # FASTAエントリーとCSVエントリーを作成
         fasta_entry = f">{sanitize_otu_name(f'{qseqid}_{accessionID}_{taxonomic_name}_{pident:.2f}')}\n{qseq}\n"
-        csv_entry = [qseqid, accessionID, taxonomic_name, pident, qseq, source]
+        csv_entry = [qseqid, accessionID, order, taxonomic_name, pident, qseq, source]
 
         return fasta_entry, csv_entry
 
@@ -165,7 +167,7 @@ def process_with_progress():
 
 import pandas as pd
 
-def csv_to_fasta(input_csv, output_fasta):
+def csv_to_fasta(input_csv, output_fasta): # FASTAへの変換をprocess_row内の処理とまとめたほうがスリムになるかも
     # CSVを読み込む
     df = pd.read_csv(input_csv)
 
@@ -333,7 +335,7 @@ else:
         fasta_file.writelines(fasta_list)
 
     csv_filename = os.path.join('..', 'output', f"{args.output_base}.csv")
-    output_df = pd.DataFrame(csv_data, columns=["qseqid", "accessionID", "taxonomic_name", "pident", "qseq", "source"])
+    output_df = pd.DataFrame(csv_data, columns=["qseqid", "accessionID", "Order", "taxonomic_name", "pident", "qseq", "source"])
     output_df.to_csv(csv_filename, index=False)
 
 # --treeオプションがあるとき：VSEARCH→MAFFT→FastTreeで系統樹作成
