@@ -11,6 +11,7 @@ import argparse
 import re
 import os
 import six
+import csv
 from datetime import datetime
 sys.path.append('/usr/local/lib/python3.7/site-packages')
 from ete3 import NodeStyle
@@ -25,6 +26,7 @@ parser.add_argument('input_csv', help="Input CSV file (relative path to ../input
 parser.add_argument('output_base', help="Output base name (relative path to ../output)")
 parser.add_argument('--top', type=int, default=1, choices=range(1, 6), help="Number of top results to retain per qseqid (default: 1, range: 1-5)")
 parser.add_argument('--onlyp', action='store_true', help="Run only phylogenic analysis")
+parser.add_argument('--class', type=str, dest="class_name", nargs='+', help="Select using class for phylogenetic analysis")
 parser.add_argument('--tree', help="Generate phylogenetic tree", action='store_true')
 tree_group = parser.add_argument_group('FastTree options', 'Options for FastTree analysis')
 tree_group.add_argument('--method', default="NJ", choices=["NJ", "ML"], help="Tree generation method: NJ or ML")
@@ -86,13 +88,43 @@ def get_gbif_taxonomic_info(species_name):
                         'species': data.get('species'),
                         'genus': data.get('genus'),
                         'family': data.get('family'),
-                        'order': data.get('order')
+                        'order': data.get('order'),
+                        'class': data.get('class')
                     }
             print(f"GBIF API request incomplete or failed (attempt {attempt + 1}/3)")
         except requests.exceptions.RequestException as e:
             print(f"GBIF API request failed: {e}. Retrying...")
         time.sleep(1)
     return None
+
+# --classの引数で絞り込む
+def filter_by_class(input_csv, output_csv, class_name):
+    try:
+        # CSVを読み込む
+        df = pd.read_csv(input_csv)
+
+        # 'class' カラムが存在するか確認
+        if 'class' not in df.columns:
+            raise KeyError("'class' column not found in the input CSV.")
+
+        # クラスが一致する行をフィルタリング
+        filtered_df = df[df['class'].isin(class_name)]
+
+        # 結果が空でないことを確認
+        if len(filtered_df) == 0:
+            print("No matching rows found for the given class.")
+
+        # フィルタリングされた結果を出力
+        os.makedirs(os.path.dirname(output_csv), exist_ok=True)  # 出力ディレクトリを作成
+        filtered_df.to_csv(output_csv, index=False)
+
+        print(f"Filtered data saved to {output_csv}.")
+    except FileNotFoundError:
+        print(f"Error: Input file {input_csv} not found.")
+    except KeyError:
+        print("Error: 'Class' column not found in the input CSV.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
 
 def process_row(index, row):
     qseqid = row['qseqid']
@@ -122,7 +154,8 @@ def process_row(index, row):
                 'species': organism_name,
                 'genus': taxonomy_list[-1] if len(taxonomy_list) > 0 else None,
                 'family': taxonomy_list[-2] if len(taxonomy_list) > 1 else None,
-                'order': taxonomy_list[-3] if len(taxonomy_list) > 2 else None
+                'order': taxonomy_list[-3] if len(taxonomy_list) > 2 else None,
+                'class': taxonomy_list[-4] if len(taxonomy_list) > 3 else None
             }
             source = 'NCBI'
 
@@ -137,10 +170,11 @@ def process_row(index, row):
             taxonomic_name = taxonomic_info.get('order')
 
         order = taxonomic_info.get('order')
+        class_name = taxonomic_info.get('class')
 
         # FASTAエントリーとCSVエントリーを作成
         fasta_entry = f">{sanitize_otu_name(f'{qseqid}_{accessionID}_{taxonomic_name}_{pident:.2f}')}\n{qseq}\n"
-        csv_entry = [qseqid, accessionID, order, taxonomic_name, pident, qseq, source]
+        csv_entry = [qseqid, accessionID, class_name, order, taxonomic_name, pident, qseq, source]
 
         return fasta_entry, csv_entry
 
@@ -149,23 +183,65 @@ def process_row(index, row):
         return None, None
 
 # APIリクエストの進捗表示用
-def process_with_progress():
+def process_with_progress(filter_class=None):
     processed_rows = 0
     total_rows = len(df)
+    fasta_list = []  # フィルター前のFASTAデータ
+    csv_data = []    # フィルター前のCSVデータ
+    filtered_fasta_list = []  # フィルター後のFASTAデータ
+    filtered_csv_data = []    # フィルター後のCSVデータ
+
     with ThreadPoolExecutor(max_workers=5) as executor:
         futures = {executor.submit(process_row, index, row): index for index, row in df.iterrows()}
         for future in as_completed(futures):
             index = futures[future]
-            fasta_entry, csv_entry = future.result()
-            if fasta_entry and csv_entry:
-                fasta_list.append(fasta_entry)
-                csv_data.append(csv_entry)
-                processed_rows += 1
-                print(f"\rProcessed row {processed_rows} of {total_rows} ({processed_rows / total_rows:.2%})", end='')
+            try:
+                fasta_entry, csv_entry = future.result()
+                if fasta_entry and csv_entry:
+                    fasta_list.append(fasta_entry)
+                    csv_data.append(csv_entry)
+
+                    # フィルタリング処理
+                    if filter_class:
+                        class_value = csv_entry[2]  # 'class' カラムの値
+                        if class_value is None:
+                            class_value = ""
+                        if class_value.strip().lower() in [item.lower() for item in filter_class]:
+                            filtered_fasta_list.append(fasta_entry)
+                            filtered_csv_data.append(csv_entry)
+                    else:
+                        # フィルターなしの場合は全データを追加
+                        filtered_fasta_list.append(fasta_entry)
+                        filtered_csv_data.append(csv_entry)
+
+                    processed_rows += 1
+                    print(f"\rProcessed row {processed_rows} of {total_rows} ({processed_rows / total_rows:.2%})", end='')
+            except Exception as e:
+                print(f"\nError processing row {index + 1}: {e}")
 
     print()  # End progress tracking
 
-import pandas as pd
+    output_fasta = save_fasta('../output/pre_filtered_output.fasta', fasta_list)
+    save_csv('../output/pre_filtered_output.csv', csv_data)
+
+    print("Processing complete.")
+
+    if filter_class:
+        output_fasta = save_fasta('../output/filtered_output.fasta', filtered_fasta_list)
+        save_csv('../output/filtered_output.csv', filtered_csv_data)
+
+    return output_fasta
+
+def save_fasta(file_path, fasta_entries):
+    with open(file_path, 'w') as f:
+        f.writelines(fasta_entries)
+    return file_path
+
+def save_csv(file_path, csv_rows):
+    with open(file_path, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['qseqid', 'accessionID', 'class', 'order', 'taxonomic_name', 'pident', 'qseq', 'source']) # ヘッダー行
+        writer.writerows(csv_rows)
 
 def csv_to_fasta(input_csv, output_fasta): # FASTAへの変換をprocess_row内の処理とまとめたほうがスリムになるかも
     # CSVを読み込む
@@ -189,6 +265,8 @@ def csv_to_fasta(input_csv, output_fasta): # FASTAへの変換をprocess_row内�
 
             # FASTAエントリを書き込む
             fasta_file.write(f">{otu_name}\n{sequence}\n")
+
+    return output_fasta
 
 # VSEARCH
 def run_vsearch(input_fasta, output_centroids):
@@ -320,23 +398,19 @@ def run_mptp(tree_file):
     except subprocess.CalledProcessError as e:
         print(f"Error running mPTP: {e}")
 
-# 系統解析以降だけ実行するための分岐
-if args.onlyp:
+if args.onlyp: # 系統解析以降だけ実行するための分岐
     input_csv = os.path.join('..', 'input', f"{args.input_csv}")
+    filtered_filename = os.path.join('..', 'output', f"{args.output_base}_filtered.csv")  # ../output 下に保存
+
+    if args.class_name:  # --classがあるとき、指定されたclassで絞込
+        filter_by_class(input_csv, filtered_filename, args.class_name)
+
     fasta_filename = os.path.join('..', 'output', f"{args.output_base}.fasta")
-    csv_to_fasta(input_csv, fasta_filename)
+    output_fasta = csv_to_fasta(input_csv, fasta_filename)
+
 else:
     # 分類データの取得
-    process_with_progress()
-
-    # 加工後のFASTAとCSVの書き出し
-    fasta_filename = os.path.join('..', 'output', f"{args.output_base}.fasta")
-    with open(fasta_filename, "w") as fasta_file:
-        fasta_file.writelines(fasta_list)
-
-    csv_filename = os.path.join('..', 'output', f"{args.output_base}.csv")
-    output_df = pd.DataFrame(csv_data, columns=["qseqid", "accessionID", "Order", "taxonomic_name", "pident", "qseq", "source"])
-    output_df.to_csv(csv_filename, index=False)
+    output_fasta = process_with_progress(args.class_name)
 
 # --treeオプションがあるとき：VSEARCH→MAFFT→FastTreeで系統樹作成
 if args.tree:
@@ -345,7 +419,7 @@ if args.tree:
     tree_file = f"{args.output_base}_tree.nwk"
 
     # Run VSEARCH to cluster sequences
-    run_vsearch(fasta_filename, vsearch_output)
+    run_vsearch(output_fasta, vsearch_output)
 
     # Run MAFFT on the VSEARCH output
     run_mafft(vsearch_output, aligned_fasta)
