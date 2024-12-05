@@ -87,6 +87,8 @@ CSV形式です
            - `--bootstrap`：ブートストラップ値の指定。デフォルトでは`250`になっています。
            - `--gamma`：ガンマ分布を適用するかどうか。デフォルトでは`False`になっています。
            - `--outgroup`：外群の指定。デフォルトでは`None`になっています。
+       - bPTPのオプション
+         - https://github.com/shigebio/MICUM/pull/6
 1. コンテナの停止
    - `sudo docker-compose down`
      - ずっとコンテナ動かしているとメモリ消費しそうなので、停止させておくとよさそうです
