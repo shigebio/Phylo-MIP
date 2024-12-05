@@ -31,6 +31,7 @@ CSV形式です
 ### inputファイル作成
 - このプロジェクトの説明ではないので、全体のフローはあとでPDFなどで別添えにする予定
 #### **localBLAST実行例**
+##### ※このあたりは、責務の範疇でないので後で消してqiitaなどに載せようかと考えています
 - 配列情報の取得
     1. GenBankで下記のように検索し、send toからFASTA形式で出力
        1. `Animalia 16S NOT "whole genome" NOT "chromosome" NOT "complete genome" 423750'`
@@ -43,7 +44,7 @@ CSV形式です
     - `-outfmt "10 xx yy"`と`sed -i '1i xx, yy'`の項目と順番は揃えてください
     - 最低限、先述の4項目があれば動きます
 ## プログラムを使う
-1. Dockerの導入
+1. Dockerの導入 ※このあたりも責務の範疇でないので後で消してqiitaなどに載せようかと考えています
      - https://docs.docker.jp/engine/getstarted/step_one.html
 2. リポジトリをDL or クローン
      - DL or クローンする場所は、デスクトップなどファイルシステムからアクセスしやすい場所がおすすめです
@@ -52,7 +53,7 @@ CSV形式です
 3. クローンしたファイルに移動
   `cd /{path to MICUM}/MICUM`
        - クローンした場所にファイルが作られるので、`cd MICUM`でも行けると思います
-1. Dockerの起動
+1. Dockerの起動 ※このあたりは各OSごとに書き分けるか検討中
    ```
    sudo service docker start
 1. Docker環境のビルド
