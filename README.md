@@ -43,7 +43,8 @@ CSV形式です
         ```
         blastn -db {2.で作成したDB名}.nc -query {検索かけたいFASTAファイル名} -out {出力したいファイル名}.csv -outfmt "10 qseqid sseqid sallacc length pident mismatch gapopen qstart qend sstart send evalue bitscore qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sseqid,sallacc,length,pident,mismatch,gapopen,qstart,qend,sstart,send,evalue,bitscore,qseq' {出力したいファイル名}.csv
     - `-outfmt "10 xx yy"`と`sed -i '1i xx, yy'`の項目と順番は揃えてください
-    - 最低限、先述の4項目があれば動きます
+    - `&& sed`以下が通らない場合は、カラム名を手動でつければ大丈夫です
+    - `-outfmt "10 xx yy zz"`内の引数は最低限、`qseqid` `sallacc` `pident` qseq`があれば動きます
 ## プログラムを使う
 1. Dockerの導入 ※このあたりも責務の範疇でないので後で消してqiitaなどに載せようかと考えています
      - https://docs.docker.jp/engine/getstarted/step_one.html
