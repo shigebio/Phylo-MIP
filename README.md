@@ -83,10 +83,13 @@ CSV形式です
        - `python3 name_taxonomy_create_tree.py {入力するCSVファイル名} {出力したいファイル名} --tree {各種オプション}`
        - 例：`python3 name_taxonomy_create_tree.py your_input.csv output --tree --method NJ --bootstrap 250`
        - オプション
-           - `--method`：系統樹作成手法の選択。デフォルトでは`NJ`になっています。`ML`と`NJ`が選べます
-           - `--bootstrap`：ブートストラップ値の指定。デフォルトでは`250`になっています。
+           - `--method {-mlでML}`：系統樹作成手法の選択。デフォルトでは`NJ`になっています。`ML`と`NJ`が選べます
+             - `-ml`でML法指定の方がシンプルかも
+           - `--bootstrap {bootstrap回数}`：ブートストラップ値の指定。デフォルトでは`250`になっています。
            - `--gamma`：ガンマ分布を適用するかどうか。デフォルトでは`False`になっています。
-           - `--outgroup`：外群の指定。デフォルトでは`None`になっています。
+           - `--outgroup {OTU名}`：外群の指定。デフォルトでは`None`になっています。
+           - `--onlyp`： 系統解析(アライメント→同一ハプロタイプ除去→系統樹作成→種決定解析)
+             - https://github.com/shigebio/MICUM/pull/7
        - bPTPのオプション
          - https://github.com/shigebio/MICUM/pull/6
 1. コンテナの停止
@@ -95,3 +98,6 @@ CSV形式です
      - upで再起動→手順2から再開できます
 # 出力
 - 後で書きます
+
+# 使用時に感じた問題点
+→[new issue作成](https://github.com/shigebio/MICUM/issues)して記載いただけると🙏
