@@ -24,7 +24,7 @@ default_seed = random.randint(1, 10**6)
 parser = argparse.ArgumentParser(description="Process Sequence file and generate phylogenetic trees")
 parser.add_argument('input_csv', help="Input CSV file (relative path to ../input)")
 parser.add_argument('output_base', help="Output base name (relative path to ../output)")
-parser.add_argument('--top', type=int, default=1, choices=range(1, 6), help="Number of top results to retain per qseqid (default: 1, range: 1-5)")
+parser.add_argument('--top', type=int, default=1, choices=range(1, 10), help="Number of top results to retain per qseqid (default: 5, range: 1-10)")
 parser.add_argument('--onlyp', action='store_true', help="Run only phylogenic analysis")
 parser.add_argument('--class', type=str, dest="class_name", nargs='+', help="Select using class for phylogenetic analysis")
 parser.add_argument('--tree', help="Generate phylogenetic tree", action='store_true')
@@ -309,7 +309,7 @@ def run_mafft(vsearch_output, output_aligned):
     subprocess.run(mafft_cmd, shell=True, check=True)
 
 # FastTree
-def run_fasttree(input_aligned, output_tree, method="NJ", bootstrap=250, gamma=False, outgroup=None):
+def run_fasttree(input_aligned, output_tree, method="NJ", bootstrap=1000, gamma=False, outgroup=None):
     fasttree_cmd = "fasttree -nt"
 
     if method == "NJ":
@@ -365,31 +365,6 @@ def run_bptp(tree_file, mcmc, thinning, burnin, seed):
         print('bPTP analysis complete.')
     except subprocess.CalledProcessError as e:
         print(f"Error running bPTP.py: {e}")
-
-# PTP
-# 保留
-# def run_ptp(tree_file):
-#     try:
-#         # PTP.pyのパスを構築
-#         ptp_path = os.path.join('/app/PTP/bin', 'PTP.py')
-
-#         # 出力ディレクトリの作成
-#         now = datetime.now().strftime('%Y%m%d_%H%M%S')  # 年月日と分秒を取得
-#         output_dir = os.path.join('../output', f'PTP_{now}')
-#         os.makedirs(output_dir, exist_ok=True)  # ディレクトリを作成（存在する場合はスキップ）
-
-#         # 出力ファイル名を設定
-#         output_file = os.path.join(output_dir, 'output_base_tree_ptp_output.txt')  # 出力ファイルのパス
-#         seed = '1234'  # 任意のシード値を設定
-
-#         # PTP.pyを実行
-#         subprocess.run(
-#             ['xvfb-run', '-a', 'python3', ptp_path, '-t', tree_file, '-o', output_file, '-s', seed],
-#             check=True
-#         )
-#         print('PTP analysis complete.')
-#     except subprocess.CalledProcessError as e:
-#         print(f"Error running PTP.py: {e}")
 
 def run_mptp(tree_file):
     try:
@@ -456,10 +431,6 @@ if args.tree:
 
     print(f"MCMC: {mcmc}, Thinning: {thinning}, Burn-in: {burnin}, Seed: {seed}")
     run_bptp(nexus_output, mcmc, thinning, burnin, seed)
-
-    # Run PTP
-    # 保留
-    # run_ptp(nexus_output)
 
     # Run mPTP
     run_mptp(nexus_output)
