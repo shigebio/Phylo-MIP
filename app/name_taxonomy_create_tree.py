@@ -23,7 +23,7 @@ default_seed = random.randint(1, 10**6)
 # オプション引数をパース
 parser = argparse.ArgumentParser(description="Process Sequence file and generate phylogenetic trees")
 parser.add_argument('input_csv', help="Input CSV file (relative path to ../input)")
-parser.add_argument('output_base', help="Output base name (relative path to ../output)")
+parser.add_argument('--o',  type=str, dest="output_base", help="Output base name")
 parser.add_argument('--top', type=int, default=1, choices=range(1, 10), help="Number of top results to retain per qseqid (default: 5, range: 1-10)")
 parser.add_argument('--onlyp', action='store_true', help="Run only phylogenic analysis")
 parser.add_argument('--class', type=str, dest="class_name", nargs='+', help="Select using class for phylogenetic analysis")
@@ -98,6 +98,7 @@ def get_gbif_taxonomic_info(species_name):
         except requests.exceptions.RequestException as e:
             print(f"GBIF API request failed: {e}. Retrying...")
         time.sleep(1)
+
     return None
 
 # --classの引数で絞り込む
@@ -386,14 +387,16 @@ def run_mptp(tree_file):
     except subprocess.CalledProcessError as e:
         print(f"Error running mPTP: {e}")
 
+output_base = args.output_base if args.output_base else f"{args.input_csv}_output"
+
 if args.onlyp: # 系統解析以降だけ実行するための分岐
     input_csv = os.path.join('..', 'input', f"{args.input_csv}")
-    filtered_filename = os.path.join('..', 'output', f"{args.output_base}_filtered.csv")  # ../output 下に保存
+    filtered_filename = os.path.join('..', 'output', f"{output_base}_filtered.csv")  # ../output 下に保存
 
     if args.class_name:  # --classがあるとき、指定されたclassで絞込
         filter_by_class(input_csv, filtered_filename, args.class_name)
 
-    fasta_filename = os.path.join('..', 'output', f"{args.output_base}.fasta")
+    fasta_filename = os.path.join('..', 'output', f"{output_base}.fasta")
     output_fasta = csv_to_fasta(input_csv, fasta_filename)
 
 else:
@@ -403,8 +406,8 @@ else:
 # --treeオプションがあるとき：VSEARCH→MAFFT→FastTreeで系統樹作成
 if args.tree:
     vsearch_output = os.path.join("../output/", "output_vsearch.fasta")
-    aligned_fasta = f"{args.output_base}_aligned.fasta"
-    tree_file = f"{args.output_base}_tree.nwk"
+    aligned_fasta = f"{output_base}_aligned.fasta"
+    tree_file = f"{output_base}_tree.nwk"
 
     # Run VSEARCH to cluster sequences
     run_vsearch(output_fasta, vsearch_output)
@@ -418,7 +421,7 @@ if args.tree:
 
     # NEXUSファイルの書き出し
     nwk = Phylo.read(f"../output/{tree_file}", 'newick')
-    Phylo.write(nwk, f"../output/{args.output_base}_tree.nex", 'nexus')
+    Phylo.write(nwk, f"../output/{output_base}_tree.nex", 'nexus')
     print("Newick file from FastTree has been converted to NEXUS format.")
 
     nexus_output = os.path.join("../output/", tree_file)
