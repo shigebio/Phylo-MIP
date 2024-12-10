@@ -24,7 +24,7 @@ default_seed = random.randint(1, 10**6)
 parser = argparse.ArgumentParser(description="Process Sequence file and generate phylogenetic trees")
 parser.add_argument('input_csv', help="Input CSV file (relative path to ../input)")
 parser.add_argument('output_base', help="Output base name (relative path to ../output)")
-parser.add_argument('--top', type=int, default=1, choices=range(1, 6), help="Number of top results to retain per qseqid (default: 1, range: 1-5)")
+parser.add_argument('--top', type=int, default=1, choices=range(1, 10), help="Number of top results to retain per qseqid (default: 5, range: 1-10)")
 parser.add_argument('--onlyp', action='store_true', help="Run only phylogenic analysis")
 parser.add_argument('--class', type=str, dest="class_name", nargs='+', help="Select using class for phylogenetic analysis")
 parser.add_argument('--tree', help="Generate phylogenetic tree", action='store_true')
@@ -309,7 +309,7 @@ def run_mafft(vsearch_output, output_aligned):
     subprocess.run(mafft_cmd, shell=True, check=True)
 
 # FastTree
-def run_fasttree(input_aligned, output_tree, method="NJ", bootstrap=250, gamma=False, outgroup=None):
+def run_fasttree(input_aligned, output_tree, method="NJ", bootstrap=1000, gamma=False, outgroup=None):
     fasttree_cmd = "fasttree -nt"
 
     if method == "NJ":
