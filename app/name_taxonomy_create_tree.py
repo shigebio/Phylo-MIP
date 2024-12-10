@@ -366,31 +366,6 @@ def run_bptp(tree_file, mcmc, thinning, burnin, seed):
     except subprocess.CalledProcessError as e:
         print(f"Error running bPTP.py: {e}")
 
-# PTP
-# 保留
-# def run_ptp(tree_file):
-#     try:
-#         # PTP.pyのパスを構築
-#         ptp_path = os.path.join('/app/PTP/bin', 'PTP.py')
-
-#         # 出力ディレクトリの作成
-#         now = datetime.now().strftime('%Y%m%d_%H%M%S')  # 年月日と分秒を取得
-#         output_dir = os.path.join('../output', f'PTP_{now}')
-#         os.makedirs(output_dir, exist_ok=True)  # ディレクトリを作成（存在する場合はスキップ）
-
-#         # 出力ファイル名を設定
-#         output_file = os.path.join(output_dir, 'output_base_tree_ptp_output.txt')  # 出力ファイルのパス
-#         seed = '1234'  # 任意のシード値を設定
-
-#         # PTP.pyを実行
-#         subprocess.run(
-#             ['xvfb-run', '-a', 'python3', ptp_path, '-t', tree_file, '-o', output_file, '-s', seed],
-#             check=True
-#         )
-#         print('PTP analysis complete.')
-#     except subprocess.CalledProcessError as e:
-#         print(f"Error running PTP.py: {e}")
-
 def run_mptp(tree_file):
     try:
         # 出力ディレクトリの作成
@@ -456,10 +431,6 @@ if args.tree:
 
     print(f"MCMC: {mcmc}, Thinning: {thinning}, Burn-in: {burnin}, Seed: {seed}")
     run_bptp(nexus_output, mcmc, thinning, burnin, seed)
-
-    # Run PTP
-    # 保留
-    # run_ptp(nexus_output)
 
     # Run mPTP
     run_mptp(nexus_output)
