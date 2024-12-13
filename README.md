@@ -1,12 +1,46 @@
 # MICUM(Moleculer Identification pipeline Computational Unit Manager：仮称)
 ## これはなに
 - 系統解析～種の判定を簡易的かつほぼ自動的に行うことを目標に作成したパイプラインツールです
-- Dockerを使用しており、使用者の環境に依存しません
-- 使用用途
-  - 環境DNA
-  - etc
+- 仮想環境の構成にDockerを使用しており、使用者のOSや環境に依存しません
+### 使用用途
+- 環境DNAを使用した系統解析のために作られました
+
+### できること
+- `localBLAST`or`BLAST+`で出力したファイルをもとに種名を取得(NCBIのデータで構成されたDBに限られます)
+- 系統解析用FASTAファイルの作成
+- 配列のアライメント(MAFFT)
+- ハプロタイプの検出(NSEARCH)
+- 系統樹の作成(FASTTree)
+- 種の区分決定解析(bPTP, mPTP)
 
 ## 入力ファイルの準備
+- `localBLAST`or`BLAST+`で出力した検索結果のCSVファイルを入力ファイルとして使用します
+### **localBLAST実行例**
+※このあたりは、責務の範疇でないので後で消してqiitaなどに載せようかと考えています
+#### NCBIのデータからDBの作成
+1. BDとして使用したい配列を検索し、send toからFASTA形式で出力
+  <send toの場所の画像>
+   - 例：動物門のmtDNA 16S rRNA領域を検索(https://www.ncbi.nlm.nih.gov/nuccore/advanced)
+  ```
+    ((((Animalia) AND 16S) NOT whole genome) NOT chromosome) NOT complete genome
+  ```
+1. `localBLAST`or`BLAST+`でDB作成
+  - 例：動物門のmtDNA 16S rRNA領域をDBにする
+   ```
+   makeblastdb -in animalia_16S.fasta -dbtype nucl -out animalia_16S_db.nc -hash_index -parse_seqids
+   ```
+2. 作成したDBに対してBLAST検索をかけたい配列のFASTAファイルでBLAST検索
+    ```
+    blastn -db {検索対象DB名}.nc -query {BLAST検索をかけたい配列のFASTAファイル名} -out {出力したいファイル名}.csv -outfmt "10 qseqid sallacc pident qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sallacc,pident,qseq' {出力したいファイル名}.csv
+    ```
+    - 例：`2.`で作成したDBに対して、BLAST検索をかけたいFASTAファイル`query_sequence.fasta`でBLAST検索したい場合
+    ```
+    blastn -db animalia_16S_db.nc -query query_sequence.fasta -out output_quried.csv -outfmt "10 qseqid sallacc pident qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sallacc,pident,qseq' output_quried.csv
+    ```
+    - `-outfmt "10 xx yy"`と`sed -i '1i xx,yy'`の項目と順番は揃えてください
+    - `&& sed`以下が通らない場合は、下記入力ファイル例と同じ形式でカラム名を手動でつければ大丈夫です
+    - `-outfmt "10 xx yy zz"`内の引数はオプションで増やすことができますが、最低限、`qseqid` `sallacc` `pident` `qseq`があれば動きます
+
 ### 入力ファイル例
 CSV形式です
 | qseqid | sallacc | pident | qseq |
@@ -17,90 +51,153 @@ CSV形式です
 | 9534cfe94fa593ed74 | AB4567 | 96.032 | GATCGAT・・・ |
 #### 各項目について
 - `qseqid`
-  - `localBLAST`実行時につく通し番号で、クエリ上の通し番号でサンプルごとに割り当てられます
+  - BLAST検索実行時につく通し番号で、クエリ上の通し番号でサンプルごとに割り当てられます
   - ここの値をもとにBLAST結果を`pident`の高い順から選択してデータセットに含めるオプションがあります
 - `sallacc`
-  - NCBIの`Accession ID`
-  - 種名の検索に使います
+  - NCBIのデータをDBに使用する場合、`Accession ID`に相当します
+  - 種名の検索に使用します
 - `pident`
-  - `localBLAST`実行時に出力されるサンプル配列とリファレンス配列の一致率
+  - BLAST検索実行時に出力されるサンプル配列とリファレンス配列の一致率
 - `qseq`
-  - サンプル配列の塩基配列情報
+  - BLAST検索に使用したデータの塩基配列
 
-- `localBLAST`,`BLAST+`などで行う想定ですが、最終的にinputが要求する形式と一致していれば、手動で作成しても問題ないです
+- `localBLAST`,`BLAST+`などで検索した後のファイルを使用する想定ですが、上記形式と一致していれば、手動で作成しても問題ないです
 
-### inputファイル作成
-- このプロジェクトの説明ではないので、全体のフローはあとでPDFなどで別添えにする予定
-#### **localBLAST実行例**
-##### ※このあたりは、責務の範疇でないので後で消してqiitaなどに載せようかと考えています
-- 配列情報の取得
-    1. GenBankで下記のように検索し、send toからFASTA形式で出力
-       1. `Animalia 16S NOT "whole genome" NOT "chromosome" NOT "complete genome" 423750'`
-    2. localBLAST、またはBLAST+でDB作成
-        ```
-        makeblastdb -in {DLしてきたFASTAファイル名} -dbtype nucl -out {出力したいファイル名}.nc -hash_index -parse_seqids
-    3. 作成したDBに対して検索をかけたい配列のFASTAファイルでBLAST検索
-        ```
-        blastn -db {2.で作成したDB名}.nc -query {検索かけたいFASTAファイル名} -out {出力したいファイル名}.csv -outfmt "10 qseqid sseqid sallacc length pident mismatch gapopen qstart qend sstart send evalue bitscore qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sseqid,sallacc,length,pident,mismatch,gapopen,qstart,qend,sstart,send,evalue,bitscore,qseq' {出力したいファイル名}.csv
-    - `-outfmt "10 xx yy"`と`sed -i '1i xx, yy'`の項目と順番は揃えてください
-    - `&& sed`以下が通らない場合は、カラム名を手動でつければ大丈夫です
-    - `-outfmt "10 xx yy zz"`内の引数は最低限、`qseqid` `sallacc` `pident` qseq`があれば動きます
-## プログラムを使う
+## Installation
 1. Dockerの導入 ※このあたりも責務の範疇でないので後で消してqiitaなどに載せようかと考えています
      - https://docs.docker.jp/engine/getstarted/step_one.html
 2. リポジトリをDL or クローン
-     - DL or クローンする場所は、デスクトップなどファイルシステムからアクセスしやすい場所がおすすめです
+     - DLする場合
+      <DLする場所の画像>
      - クローンする場合
-       `git clone https://github.com/shigebio/MICUM`
+      ```
+      git clone https://github.com/shigebio/MICUM
+      ```
 3. DL/クローンしたファイルに移動
-  `cd /{path to MICUM}/MICUM`
-   - クローンした場合：クローンした場所にファイルが作られるので、`cd MICUM`でも行けると思います
-   
-1. Dockerの起動 ※このあたりは各OSごとに書き分けるか検討中...
-   ```
-   sudo service docker start
-1. Docker環境のビルド
     ```
-    $ sudo docker-compose build
-    # 後述するコンテナの立ち上げと同時に行う場合
-    $ sudo docker-compose up --build -d
-    # おそらくこれだとbuild一瞬？
-    $ sudo docker pull shigebio/name_taxonomy_create_tree
+    cd /{path to MICUM}/MICUM
     ```
-  - イメージのDocker hubレポジトリ：[shigebio/name_taxonomy_create_tree](https://hub.docker.com/r/shigebio/name_taxonomy_create_tree)
-2. コンテナの起動
-  `sudo docker-compose up -d`
-     - ビルドした環境を起動しています
-     - `sudo docker-compose up --build -d`やった場合は、やらなくていいです
-1. コンテナ内に移動
-  `sudo docker-compose exec -it app /bin/bash`
-     - `root@ca174dd9ea32:/app# `コンソールがこんなかんじになれば大丈夫です
-1. 事前に用意したCSVファイルを`imput`下に移動
-2. コマンド実行
-     - FASTAファイルとCSVファイル出力だけしたい場合
-       - `python name_taxonomy_create_tree.py {入力するCSVファイル名} {出力したいファイル名}`
-       - 例：`python name_taxonomy_create_tree.py your_data.csv output`
-       - オプション
-         - `--top`：`qseqid`が同じものを`pident`の上位から1~5まで指定できます
-     - 系統樹作成～種同定(PTP)まで
-       - `python3 name_taxonomy_create_tree.py {入力するCSVファイル名} {出力したいファイル名} --tree {各種オプション}`
-       - 例：`python3 name_taxonomy_create_tree.py your_input.csv output --tree --method NJ --bootstrap 250`
-       - オプション
-           - `--method {-mlでML}`：系統樹作成手法の選択。デフォルトでは`NJ`になっています。`ML`と`NJ`が選べます
-             - `-ml`でML法指定の方がシンプルかも
-           - `--bootstrap {bootstrap回数}`：ブートストラップ値の指定。デフォルトでは`250`になっています。
-           - `--gamma`：ガンマ分布を適用するかどうか。デフォルトでは`False`になっています。
-           - `--outgroup {OTU名}`：外群の指定。デフォルトでは`None`になっています。
-           - `--onlyp`： 系統解析(アライメント→同一ハプロタイプ除去→系統樹作成→種決定解析)
-             - https://github.com/shigebio/MICUM/pull/7
-       - bPTPのオプション
-         - https://github.com/shigebio/MICUM/pull/6
-1. コンテナの停止
+4. 仮想環境の構築
+    <details><summary>Windows/Mac</summary>
+    1. Docker Desktopを起動
+       1. ```
+          # dockerの起動確認
+          docker version
+          ```
+    2. 仮想環境の構築
+        ```
+        docker-compose build
+        ```
+    3. 仮想環境の起動
+        ```
+        docker-compose up -d
+        ```
+    4. 仮想環境に入る
+        ```
+        docker exec -it app /bin/bash
+        ```
+    </details>
+
+    <details><summary>Linux</summary>
+       1. Docker Composeがインストールされていない場合はインストール
+          ```
+          # Docker Composeのインストール
+          sudo apt update
+          sudo apt install docker-compose
+          ```
+    1. 仮想環境の構築
+        ```
+        # 実効環境によってはsudoは不要になります
+        sudo docker-compose build
+        ```
+    2. 仮想環境の起動
+        ```
+        sudo docker-compose up -d
+        ```
+    3. 仮想環境に入る
+        ```
+        sudo docker exec -it app /bin/bash
+        ```
+    </details>
+
+     - イメージをDocker hubから取得することも可能です(上記手順を行った場合は不要です)
+       - [shigebio/name_taxonomy_create_tree](https://hub.docker.com/r/shigebio/name_taxonomy_create_tree)
+     - 仮想環境の起動後はコンソールに表示されているPATHが以下のようになれば大丈夫です
+      `root@ca174dd9ea32:/app#`
+     - DL or クローンしてきたファイルの`app`フォルダ下に`input`フォルダ、`output`フォルダが作成されていることを確認してください
+5. 事前に用意したCSVファイルを`input`フォルダ下に移動
+6. コマンドの実行
+   1. 基本のコマンド
+      - `python3 name_taxonomy_create_tree.py {入力するCSVファイル名} --tree {各種オプション}`
+        - 例：`python3 name_taxonomy_create_tree.py your_input.csv --tree --method -ml --bootstrap 250`
+           <details><summary>オプション</summary>
+
+            - `--top` : `qseqid`が同じものを`pident`の上位から1~10まで指定できます
+              - デフォルト：`5`
+            - `--o` : outputファイルの出力名。無い場合はデフォルト名が適用されます
+            - `--class` : 特定の分類群(現段階では綱まで)のみに絞って解析を行うことができます
+              - NCBIやGBIFから取得した分類群情報が書き込まれていない場合は、検索対象にならないので注意が必要です
+              - 手動で`class`カラムを作成・入力することでも使用可能です
+            - `--tree`
+               ```
+               ## 子オプション
+               # --method : 系統樹作成手法の選択ができます。`-ml`でML法になります。
+               # --bootstrap : ブートストラップの反復回数の指定。デフォルト：`250`になっています・
+               # --gamma : ガンマ分布を適用するかどうか。デフォルト：`False`になっています
+               # --outgroup {OTU名} :  外群の指定
+            - `--onlyp`： 系統解析以降を実行(アライメント→同一ハプロタイプ除去→系統樹作成→種決定解析)
+               - https://github.com/shigebio/MICUM/pull/7
+             - `--bptp` : bPTP解析のオプション
+               - https://github.com/shigebio/MICUM/pull/6
+           </details>
+   2. FASTAファイルとCSVファイル出力だけしたい場合
+      - `python name_taxonomy_create_tree.py {入力するCSVファイル名} {出力したいファイル名}`
+        - 例：`python name_taxonomy_create_tree.py your_data.csv output`
+
+7. コンテナの停止
    - `sudo docker-compose down`
      - ずっとコンテナ動かしているとメモリ消費しそうなので、停止させておくとよさそうです
-     - upで再起動→手順2から再開できます
-# 出力
-- 後で書きます
+     - 再起動は`4. 仮想環境の構築 > 各OS > 2. 仮想環境の起動`参照
+
+## 出力
+### 種名取得後のFASTAファイル/CSVファイル
+- `--class`オプションがない場合
+  - `pre_filtered_{outputファイル名}.csv`
+  - `pre_filtered_{outputファイル名}.festa`
+- `--class`オプションがある場合
+  - `filtered_{outputファイル名}.csv`
+  - `filtered_{outputファイル名}.festa`
+
+### MAFFTによるアライメント後のファイル
+- `{input/outputファイル名}_aligned.fasta`
+
+### VSEARCHによる同一ハプロタイプの除去後のファイル
+- `{outputファイル名}_vsearch.fasta`
+- このファイルが系統樹作成や種区分の決定解析に使用されています
+
+### bPTP解析の結果
+- `bPTP_{作成日時}`フォルダが作成されます
+  - 主要なファイル
+    - `output_base_tree_bptp_{outputファイル名}.txt.PTPhSupportPartition.txt`
+      - 簡易ヒューリスティック検索(simple heuristic search)によるテキスト形式の解析結果
+    - `output_base_tree_bptp_{outputファイル名}.txt.PTPhSupportPartition.txt.png`
+      - 簡易ヒューリスティック検索(simple heuristic search)による画像(png)形式の解析結果
+    - `output_base_tree_bptp_{outputファイル名}.txt.PTPhSupportPartition.txt.svg`
+      - 簡易ヒューリスティック検索(simple heuristic search)による画像(svg)形式の解析結果
+    - `output_base_tree_bptp_output.txt.PTPMLPartition.txt`
+      - ML法によるテキスト形式の解析結果
+    - `output_base_tree_bptp_output.txt.PTPMLPartition.txt.png`
+      - ML法による画像(png)形式の解析結果
+    - `output_base_tree_bptp_output.txt.PTPMLPartition.txt.svg`
+      - ML法による画像(svg)形式の解析結果
+
+### mPTP解析の結果
+- `mPTP_{作成日時}`フォルダが作成されます
+  - 主要なファイル
+    - `output_base_tree_mptp_{outputファイル名}.txt.txt`
+      - 簡易ヒューリスティック検索(simple heuristic search)によるテキスト形式の解析結果
+    - `output_base_tree_mptp_{outputファイル名}.txt.svg`
+      - 簡易ヒューリスティック検索(simple heuristic search)による画像(svg)形式の解析結果
 
 # 使用時に感じた問題点
 →[new issue作成](https://github.com/shigebio/MICUM/issues)して記載いただけると🙏
