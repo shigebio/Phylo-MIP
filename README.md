@@ -20,12 +20,16 @@
 #### NCBIのデータからDBの作成
 1. BDとして使用したい配列を検索し、send toからFASTA形式で出力
    - 例：動物門のmtDNA 16S rRNA領域を検索(https://www.ncbi.nlm.nih.gov/nuccore/advanced)
-    ```
-      ((((Animalia) AND 16S) NOT whole genome) NOT chromosome) NOT complete genome
-    ```
+       ```
+       ((((Animalia) AND 16S) NOT whole genome) NOT chromosome) NOT complete genome
+       ```
+    
+     <details><summary>send toリンクの場所</summary>
 
-    ![image](https://github.com/user-attachments/assets/f9a1bf79-7ca7-48a3-bd57-c7b2451c3c71)
+       ![image](https://github.com/user-attachments/assets/7424ed3d-86ba-4afd-96b1-dec875544b98)
 
+      </details>
+      
 1. `localBLAST`or`BLAST+`でDB作成
     - 例：動物門のmtDNA 16S rRNA領域をDBにする
      ```
@@ -51,18 +55,21 @@ CSV形式です
 | 9534cfe94fa593ed72 | AB2345 | 96.016 | GATCGAT・・・ |
 | 9534cfe94fa593ed73 | AB3456 | 96.032 | GATCGAT・・・ |
 | 9534cfe94fa593ed74 | AB4567 | 96.032 | GATCGAT・・・ |
-#### 各項目について
-- `qseqid`
-  - BLAST検索実行時につく通し番号で、クエリ上の通し番号でサンプルごとに割り当てられます
-  - ここの値をもとにBLAST結果を`pident`の高い順から選択してデータセットに含めるオプションがあります
-- `sallacc`
-  - NCBIのデータをDBに使用する場合、`Accession ID`に相当します
-  - 種名の検索に使用します
-- `pident`
-  - BLAST検索実行時に出力されるサンプル配列とリファレンス配列の一致率
-- `qseq`
-  - BLAST検索に使用したデータの塩基配列
 
+ <details><summary>各項目について</summary>
+    
+   - `qseqid`
+     - BLAST検索実行時につく通し番号で、クエリ上の通し番号でサンプルごとに割り当てられます
+     - ここの値をもとにBLAST結果を`pident`の高い順から選択してデータセットに含めるオプションがあります
+   - `sallacc`
+     - NCBIのデータをDBに使用する場合、`Accession ID`に相当します
+     - 種名の検索に使用します
+   - `pident`
+     - BLAST検索実行時に出力されるサンプル配列とリファレンス配列の一致率
+   - `qseq`
+     - BLAST検索に使用したデータの塩基配列
+ </details>
+   
 - `localBLAST`,`BLAST+`などで検索した後のファイルを使用する想定ですが、上記形式と一致していれば、手動で作成しても問題ないです
 
 ## Installation
@@ -70,7 +77,11 @@ CSV形式です
      - https://docs.docker.jp/engine/getstarted/step_one.html
 2. リポジトリをDL or クローン
      - DLする場合
-      ![image](https://github.com/user-attachments/assets/ad10015a-dbe1-4498-a751-ae2e0c42a47a)
+       <details><summary>DLリンクの場所</summary>
+
+       ![image](https://github.com/user-attachments/assets/ad10015a-dbe1-4498-a751-ae2e0c42a47a)
+       
+      </details>
 
         - Download ZIPからDL
      - クローンする場合
