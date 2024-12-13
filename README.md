@@ -19,27 +19,29 @@
 ※このあたりは、責務の範疇でないので後で消してqiitaなどに載せようかと考えています
 #### NCBIのデータからDBの作成
 1. BDとして使用したい配列を検索し、send toからFASTA形式で出力
-  <send toの場所の画像>
    - 例：動物門のmtDNA 16S rRNA領域を検索(https://www.ncbi.nlm.nih.gov/nuccore/advanced)
-  ```
-    ((((Animalia) AND 16S) NOT whole genome) NOT chromosome) NOT complete genome
-  ```
+    ```
+      ((((Animalia) AND 16S) NOT whole genome) NOT chromosome) NOT complete genome
+    ```
+
+    ![image](https://github.com/user-attachments/assets/f9a1bf79-7ca7-48a3-bd57-c7b2451c3c71)
+
 1. `localBLAST`or`BLAST+`でDB作成
-  - 例：動物門のmtDNA 16S rRNA領域をDBにする
-   ```
-   makeblastdb -in animalia_16S.fasta -dbtype nucl -out animalia_16S_db.nc -hash_index -parse_seqids
-   ```
+    - 例：動物門のmtDNA 16S rRNA領域をDBにする
+     ```
+     makeblastdb -in animalia_16S.fasta -dbtype nucl -out animalia_16S_db.nc -hash_index -parse_seqids
+     ```
 2. 作成したDBに対してBLAST検索をかけたい配列のFASTAファイルでBLAST検索
-    ```
-    blastn -db {検索対象DB名}.nc -query {BLAST検索をかけたい配列のFASTAファイル名} -out {出力したいファイル名}.csv -outfmt "10 qseqid sallacc pident qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sallacc,pident,qseq' {出力したいファイル名}.csv
-    ```
-    - 例：`2.`で作成したDBに対して、BLAST検索をかけたいFASTAファイル`query_sequence.fasta`でBLAST検索したい場合
-    ```
-    blastn -db animalia_16S_db.nc -query query_sequence.fasta -out output_quried.csv -outfmt "10 qseqid sallacc pident qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sallacc,pident,qseq' output_quried.csv
-    ```
-    - `-outfmt "10 xx yy"`と`sed -i '1i xx,yy'`の項目と順番は揃えてください
-    - `&& sed`以下が通らない場合は、下記入力ファイル例と同じ形式でカラム名を手動でつければ大丈夫です
-    - `-outfmt "10 xx yy zz"`内の引数はオプションで増やすことができますが、最低限、`qseqid` `sallacc` `pident` `qseq`があれば動きます
+      ```
+      blastn -db {検索対象DB名}.nc -query {BLAST検索をかけたい配列のFASTAファイル名} -out {出力したいファイル名}.csv -outfmt "10 qseqid sallacc pident qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sallacc,pident,qseq' {出力したいファイル名}.csv
+      ```
+      - 例：`2.`で作成したDBに対して、BLAST検索をかけたいFASTAファイル`query_sequence.fasta`でBLAST検索したい場合
+      ```
+      blastn -db animalia_16S_db.nc -query query_sequence.fasta -out output_quried.csv -outfmt "10 qseqid sallacc pident qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sallacc,pident,qseq' output_quried.csv
+      ```
+      - `-outfmt "10 xx yy"`と`sed -i '1i xx,yy'`の項目と順番は揃えてください
+      - `&& sed`以下が通らない場合は、下記入力ファイル例と同じ形式でカラム名を手動でつければ大丈夫です
+      - `-outfmt "10 xx yy zz"`内の引数はオプションで増やすことができますが、最低限、`qseqid` `sallacc` `pident` `qseq`があれば動きます
 
 ### 入力ファイル例
 CSV形式です
@@ -68,7 +70,9 @@ CSV形式です
      - https://docs.docker.jp/engine/getstarted/step_one.html
 2. リポジトリをDL or クローン
      - DLする場合
-      <DLする場所の画像>
+      ![image](https://github.com/user-attachments/assets/ad10015a-dbe1-4498-a751-ae2e0c42a47a)
+
+        - Download ZIPからDL
      - クローンする場合
       ```
       git clone https://github.com/shigebio/MICUM
