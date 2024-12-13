@@ -9,7 +9,7 @@
 - `localBLAST`or`BLAST+`で出力したファイルをもとに種名を取得(NCBIのデータで構成されたDBに限られます)
 - 系統解析用FASTAファイルの作成
 - 配列のアライメント(MAFFT)
-- ハプロタイプの検出(NSEARCH)
+- ハプロタイプの検出(VSEARCH)
 - 系統樹の作成(FASTTree)
 - 種の区分決定解析(bPTP, mPTP)
 
