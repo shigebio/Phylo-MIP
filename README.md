@@ -177,7 +177,8 @@ CSV形式です
 
 ### bPTP解析の結果
 - `bPTP_{作成日時}`フォルダが作成されます
-  - 主要なファイル
+  <details><summary>主要なファイル</summary>
+
     - `output_base_tree_bptp_{outputファイル名}.txt.PTPhSupportPartition.txt`
       - 簡易ヒューリスティック検索(simple heuristic search)によるテキスト形式の解析結果
     - `output_base_tree_bptp_{outputファイル名}.txt.PTPhSupportPartition.txt.png`
@@ -191,13 +192,17 @@ CSV形式です
     - `output_base_tree_bptp_output.txt.PTPMLPartition.txt.svg`
       - ML法による画像(svg)形式の解析結果
 
+  </details>
+
 ### mPTP解析の結果
 - `mPTP_{作成日時}`フォルダが作成されます
-  - 主要なファイル
+  <details><summary>主要なファイル</summary>
+
     - `output_base_tree_mptp_{outputファイル名}.txt.txt`
       - 簡易ヒューリスティック検索(simple heuristic search)によるテキスト形式の解析結果
     - `output_base_tree_mptp_{outputファイル名}.txt.svg`
       - 簡易ヒューリスティック検索(simple heuristic search)による画像(svg)形式の解析結果
+  </details>
 
 # 使用時に感じた問題点
 →[new issue作成](https://github.com/shigebio/MICUM/issues)して記載いただけると🙏
