@@ -195,17 +195,17 @@ CSV形式です
   <details><summary>主要なファイル</summary>
 
     - `output_base_tree_bptp_{outputファイル名}.txt.PTPhSupportPartition.txt`
-      - 簡易ヒューリスティック検索(simple heuristic search)によるテキスト形式の解析結果
+      - 簡易ヒューリスティック検索(simple heuristic search)による解析結果。テキスト形式
     - `output_base_tree_bptp_{outputファイル名}.txt.PTPhSupportPartition.txt.png`
-      - 簡易ヒューリスティック検索(simple heuristic search)による画像(png)形式の解析結果
+      - 簡易ヒューリスティック検索(simple heuristic search)による解析結果。画像(png)形式
     - `output_base_tree_bptp_{outputファイル名}.txt.PTPhSupportPartition.txt.svg`
-      - 簡易ヒューリスティック検索(simple heuristic search)による画像(svg)形式の解析結果
+      - 簡易ヒューリスティック検索(simple heuristic search)による解析結果。画像(svg)形式
     - `output_base_tree_bptp_output.txt.PTPMLPartition.txt`
-      - ML法によるテキスト形式の解析結果
+      - ML法による解析結果。テキスト形式
     - `output_base_tree_bptp_output.txt.PTPMLPartition.txt.png`
-      - ML法による画像(png)形式の解析結果
+      - ML法による解析結果。画像(png)形式
     - `output_base_tree_bptp_output.txt.PTPMLPartition.txt.svg`
-      - ML法による画像(svg)形式の解析結果
+      - ML法による解析結果。画像(svg)形式
 
   </details>
 
@@ -214,9 +214,9 @@ CSV形式です
   <details><summary>主要なファイル</summary>
 
     - `output_base_tree_mptp_{outputファイル名}.txt.txt`
-      - 簡易ヒューリスティック検索(simple heuristic search)によるテキスト形式の解析結果
+      - ML法による解析結果。テキスト形式
     - `output_base_tree_mptp_{outputファイル名}.txt.svg`
-      - 簡易ヒューリスティック検索(simple heuristic search)による画像(svg)形式の解析結果
+      - ML法によるの解析結果。画像(svg)形式
   </details>
 
 # 使用時に感じた問題点
