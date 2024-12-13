@@ -31,11 +31,14 @@
       </details>
       
 1. `localBLAST`or`BLAST+`でDB作成
+   ```
+   makeblastdb -in {DBにしたい配列ファイル.fasta} -dbtype nucl -out {任意のDB名}.nc -hash_index -parse_seqids
+   ```
     - 例：動物門のmtDNA 16S rRNA領域をDBにする
      ```
      makeblastdb -in animalia_16S.fasta -dbtype nucl -out animalia_16S_db.nc -hash_index -parse_seqids
      ```
-2. 作成したDBに対してBLAST検索をかけたい配列のFASTAファイルでBLAST検索
+3. 作成したDBに対してBLAST検索をかけたい配列のFASTAファイルでBLAST検索
       ```
       blastn -db {検索対象DB名}.nc -query {BLAST検索をかけたい配列のFASTAファイル名} -out {出力したいファイル名}.csv -outfmt "10 qseqid sallacc pident qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sallacc,pident,qseq' {出力したいファイル名}.csv
       ```
