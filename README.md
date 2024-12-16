@@ -83,10 +83,10 @@ CSV形式です
        <details><summary>DLリンクの場所</summary>
 
        ![image](https://github.com/user-attachments/assets/ad10015a-dbe1-4498-a751-ae2e0c42a47a)
-       
+
+       - Download ZIPからDL
       </details>
 
-        - Download ZIPからDL
      - クローンする場合
       ```
       git clone https://github.com/shigebio/MICUM
@@ -97,42 +97,44 @@ CSV形式です
     ```
 4. 仮想環境の構築
     <details><summary>Windows/Mac</summary>
+       
     1. Docker Desktopを起動
-       1. ```
+         ```
           # dockerの起動確認
           docker version
-          ```
-    2. 仮想環境の構築
+         ```
+   3. 仮想環境の構築
         ```
         docker-compose build
         ```
-    3. 仮想環境の起動
+   4. 仮想環境の起動
         ```
         docker-compose up -d
         ```
-    4. 仮想環境に入る
+   5. 仮想環境に入る
         ```
         docker exec -it app /bin/bash
         ```
     </details>
 
     <details><summary>Linux</summary>
-       1. Docker Composeがインストールされていない場合はインストール
+       
+   1. Docker Composeがインストールされていない場合はインストール
           ```
           # Docker Composeのインストール
           sudo apt update
           sudo apt install docker-compose
           ```
-    1. 仮想環境の構築
+   1. 仮想環境の構築
         ```
         # 実効環境によってはsudoは不要になります
         sudo docker-compose build
         ```
-    2. 仮想環境の起動
+   2. 仮想環境の起動
         ```
         sudo docker-compose up -d
         ```
-    3. 仮想環境に入る
+   3. 仮想環境に入る
         ```
         sudo docker exec -it app /bin/bash
         ```
