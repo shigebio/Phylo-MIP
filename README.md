@@ -114,8 +114,14 @@ CSV形式です
         ```
    5. 仮想環境に入る
         ```
-        docker exec -it app /bin/bash
+        docker exec -it {コンテナ名} /bin/bash
         ```
+        - コンテナ名はNAMES
+          ```
+          $ sudo docker container ls
+            CONTAINER ID   IMAGE                       COMMAND       CREATED        STATUS         PORTS     NAMES
+            ca174dd9ea32   name_taxonomy_create_tree   "/bin/bash"   3 months ago   Up 4 minutes             name_taxonomy_create_tree_for_docker-app-1
+          ```
     </details>
 
     <details><summary>Linux</summary>
@@ -137,8 +143,14 @@ CSV形式です
         ```
    3. 仮想環境に入る
         ```
-        sudo docker exec -it app /bin/bash
+        sudo docker exec -it {コンテナ名} /bin/bash
         ```
+      - コンテナ名はNAMES
+          ```
+          $ sudo docker container ls
+            CONTAINER ID   IMAGE                       COMMAND       CREATED        STATUS         PORTS     NAMES
+            ca174dd9ea32   name_taxonomy_create_tree   "/bin/bash"   3 months ago   Up 4 minutes             name_taxonomy_create_tree_for_docker-app-1
+          ```
     </details>
 
      - イメージをDocker hubから取得することも可能です(上記手順を行った場合は不要です)
@@ -172,7 +184,7 @@ CSV形式です
                - https://github.com/shigebio/MICUM/pull/6
            </details>
    2. FASTAファイルとCSVファイル出力だけしたい場合
-      - `python name_taxonomy_create_tree.py {入力するCSVファイル名} {出力したいファイル名}`
+      - `python3 name_taxonomy_create_tree.py {入力するCSVファイル名} {出力したいファイル名}`
         - 例：`python name_taxonomy_create_tree.py your_data.csv output`
 
 7. コンテナの停止
