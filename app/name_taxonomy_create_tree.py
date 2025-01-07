@@ -16,15 +16,15 @@ from datetime import datetime
 sys.path.append('/usr/local/lib/python3.7/site-packages')
 from ete3 import NodeStyle
 
-# NCBI API setup:NCBIに怒られないか心配な人は自分のメールアドレスに変更
+# If you want to receive notifications from NCBI, change it to your own email address
 Entrez.email = "your_email@example.com"
 default_seed = random.randint(1, 10**6)
 
-# オプション引数をパース
+# Parsing optional arguments
 parser = argparse.ArgumentParser(description="Process Sequence file and generate phylogenetic trees")
 parser.add_argument('input_csv', help="Input CSV file (relative path to ../input)")
 parser.add_argument('--o',  type=str, dest="output_base", help="Output base name")
-parser.add_argument('--top', type=int, default=1, choices=range(1, 10), help="Number of top results to retain per qseqid (default: 5, range: 1-10)")
+parser.add_argument('--top', type=int, default=1, choices=range(1, 10), help="Number of top results to retain per qseqid (default: 1, range: 1-10)")
 parser.add_argument('--onlyp', action='store_true', help="Run only phylogenic analysis")
 parser.add_argument('--class', type=str, dest="class_name", nargs='+', help="Select using class for phylogenetic analysis")
 parser.add_argument('--tree', help="Generate phylogenetic tree", action='store_true')
@@ -42,22 +42,22 @@ bptp_group.add_argument('--seed', type=int, default=default_seed, help='Random s
 
 args = parser.parse_args()
 
-# CSV読み込み
+# Import CSV
 df = pd.read_csv(os.path.join('..', 'input', args.input_csv))
 
-# 重複するqseqidの場合はpindentが高い方から選択された数だけ残す
+# If there are duplicate qseqids, only the number selected from the one with the highest pindent is left
 df = df.sort_values('pident', ascending=False).groupby('qseqid').head(args.top)
 
 fasta_list = []
 csv_data = []
 cache = {}
 
-# 英数字、アンダースコア、ハイフン以外の文字、スペースをハイフンに変換
+# Convert strings that are inappropriate for OTUs to hyphens
 def sanitize_otu_name(name):
     name = re.sub(r'\.', '_', name)
     return re.sub(r'[^a-zA-Z0-9_>\-]', '_', name)
 
-# NCBIから分類群データ取得する用関数
+# Function to retrieve taxon data from NCBI
 def fetch_ncbi_data(accessionID):
     if accessionID in cache:
         return cache[accessionID]
@@ -73,11 +73,11 @@ def fetch_ncbi_data(accessionID):
             print(f"NCBI API request failed: {e}. Retrying... ({attempt + 1}/3)")
             time.sleep(2 ** attempt)
 
-    # 最終的に失敗した場合、エラーメッセージを返す代わりにNoneを返す
+    # On failure, instead of returning an error message, return None
     print(f"Failed to fetch data for accession ID: {accessionID}")
     return None
 
-# GBIFから分類群データ取得する用関数
+# Function to retrieve taxon data from GBIF
 def get_gbif_taxonomic_info(species_name):
     url = f"https://api.gbif.org/v1/species/match?name={species_name}"
     for attempt in range(3):
@@ -101,25 +101,25 @@ def get_gbif_taxonomic_info(species_name):
 
     return None
 
-# --classの引数で絞り込む
+# Narrow the classes by referring to the --class argument
 def filter_by_class(input_csv, output_csv, class_name):
     try:
-        # CSVを読み込む
+        # Import CSV
         df = pd.read_csv(input_csv)
 
         # 'class' カラムが存在するか確認
         if 'class' not in df.columns:
             raise KeyError("'class' column not found in the input CSV.")
 
-        # クラスが一致する行をフィルタリング
+        # Check if 'class' column exists
         filtered_df = df[df['class'].isin(class_name)]
 
-        # 結果が空でないことを確認
+        # Check that the result is not empty
         if len(filtered_df) == 0:
             print("No matching rows found for the given class.")
 
-        # フィルタリングされた結果を出力
-        os.makedirs(os.path.dirname(output_csv), exist_ok=True)  # 出力ディレクトリを作成
+        # Output the filtered results
+        os.makedirs(os.path.dirname(output_csv), exist_ok=True)  # Create output directory
         filtered_df.to_csv(output_csv, index=False)
 
         print(f"Filtered data saved to {output_csv}.")
@@ -134,28 +134,28 @@ def process_row(index, row):
     qseqid = row['qseqid']
     accessionID = row['sallacc']
     pident = row['pident']
-    qseq = row['qseq'].replace("-", "N")  # '-' を 'N' に置換
+    qseq = row['qseq'].replace("-", "N")  # Replace hyphens with N
 
     try:
-        # accessionID(sallacc)からNCBIで種名取得
+        # Obtain species name from NCBI data by referencing accessionID (sallacc)
         records = fetch_ncbi_data(accessionID)
         if not records:
-            # NCBIから情報を取得できなかった場合
-            taxonomic_name = "Uncertain_taxonomy"  # 不確定な分類群
+            # If you are unable to obtain information from NCBI
+            taxonomic_name = "Uncertain_taxonomy"  # Indeterminate taxon
             fasta_entry = f">{sanitize_otu_name(f'{qseqid}_{accessionID}_{taxonomic_name}_{pident:.2f}')}\n{qseq}\n"
             csv_entry = [qseqid, accessionID, 'Unknown', 'Unknown', taxonomic_name, pident, qseq, 'NCBI Failed']
             return fasta_entry, csv_entry
 
         organism_name = records[0]['GBSeq_organism']
 
-        # Step 2: Use species name from NCBI to query GBIF
+        # Obtain species name from GBIF data by referencing species name
         gbif_info = get_gbif_taxonomic_info(organism_name)
 
         if gbif_info:
             taxonomic_info = gbif_info
             source = 'GBIF'
         else:
-            # GBIFから取得失敗→NCBIから取得
+            # If it fails to obtain from GBIF, obtain from NCBI
             taxonomy_list = records[0]['GBSeq_taxonomy'].split("; ")
             taxonomic_info = {
                 'source': 'NCBI',
@@ -180,7 +180,7 @@ def process_row(index, row):
         order = taxonomic_info.get('order', 'Unknown')
         class_name = taxonomic_info.get('class', 'Unknown')
 
-        # FASTAエントリーとCSVエントリーを作成
+        # Generates FASTA and CSV output
         fasta_entry = f">{sanitize_otu_name(f'{qseqid}_{accessionID}_{taxonomic_name}_{pident:.2f}')}\n{qseq}\n"
         csv_entry = [qseqid, accessionID, class_name, order, taxonomic_name, pident, qseq, source]
 
@@ -190,20 +190,20 @@ def process_row(index, row):
 
     except Exception as e:
         print(f"Error processing row {index + 1}: {e}")
-        # エラー時には不確定な分類群名を使用
+        # Use "Uncertain_taxonomy" on error
         taxonomic_name = "Uncertain_taxonomy"
         fasta_entry = f">{sanitize_otu_name(f'{qseqid}_{accessionID}_{taxonomic_name}_{pident:.2f}')}\n{qseq}\n"
         csv_entry = [qseqid, accessionID, 'Unknown', 'Unknown', taxonomic_name, pident, qseq, 'Error']
         return fasta_entry, csv_entry
 
-# APIリクエストの進捗表示用
+# Function to display the progress of an API request
 def process_with_progress(filter_class=None):
     processed_rows = 0
     total_rows = len(df)
-    fasta_list = []  # フィルター前のFASTAデータ
-    csv_data = []    # フィルター前のCSVデータ
-    filtered_fasta_list = []  # フィルター後のFASTAデータ
-    filtered_csv_data = []    # フィルター後のCSVデータ
+    fasta_list = []  # Unfiltered FASTA data
+    csv_data = []    # Unfiltered CSV data
+    filtered_fasta_list = []  # Filtered FASTA data
+    filtered_csv_data = []    # Filtered CSV data
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         futures = {executor.submit(process_row, index, row): index for index, row in df.iterrows()}
@@ -215,16 +215,16 @@ def process_with_progress(filter_class=None):
                     fasta_list.append(fasta_entry)
                     csv_data.append(csv_entry)
 
-                    # フィルタリング処理
+                    # Filtering Process
                     if filter_class:
-                        class_value = csv_entry[2]  # 'class' カラムの値
+                        class_value = csv_entry[2]  # 'class' column value
                         if class_value is None:
                             class_value = ""
                         if class_value.strip().lower() in [item.lower() for item in filter_class]:
                             filtered_fasta_list.append(fasta_entry)
                             filtered_csv_data.append(csv_entry)
                     else:
-                        # フィルターなしの場合は全データを追加
+                        # If no filter is used, all data is added.
                         filtered_fasta_list.append(fasta_entry)
                         filtered_csv_data.append(csv_entry)
 
@@ -254,49 +254,49 @@ def save_fasta(file_path, fasta_entries):
 def save_csv(file_path, csv_rows):
     with open(file_path, 'w', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(['qseqid', 'accessionID', 'class', 'order', 'taxonomic_name', 'pident', 'qseq', 'source']) # ヘッダー行
+        writer.writerow(['qseqid', 'accessionID', 'class', 'order', 'taxonomic_name', 'pident', 'qseq', 'source']) # Header Row
         writer.writerows(csv_rows)
 
-def csv_to_fasta(input_csv, output_fasta): # FASTAへの変換をprocess_row内の処理とまとめたほうがスリムになるかも
-    # CSVを読み込む
+def csv_to_fasta(input_csv, output_fasta): # IMO: It may be more streamlined to combine the conversion to FASTA with the process in process_row
+    # Inport CSV
     df = pd.read_csv(input_csv)
 
-    # 必須列が存在するか確認
-    if not {'qseqid', 'qseq'}.issubset(df.columns): # 最低限OTU名が一意になるようにqseqの存在確認
+    # Check if required columns exist
+    if not {'qseqid', 'qseq'}.issubset(df.columns): # Check for the presence of qseq to ensure unique OTUs
         raise ValueError("Input CSV must contain 'qseqid' and 'qseq' columns.")
 
     with open(output_fasta, 'w') as fasta_file:
         for _, row in df.iterrows():
-            # OTU名を生成
+            # Generate OTUs
             otu_name_parts = [
                 str(row[col]).replace(" ", "_").replace(",", "_").replace(".", "_").replace("-", "_")
                 for col in df.columns if col != 'qseq' and pd.notna(row[col])
             ]
             otu_name = "_".join(otu_name_parts)
 
-            # 配列情報を取得
+            # Obtain sequence
             sequence = row['qseq']
 
-            # FASTAエントリを書き込む
+            # Write a FASTA entry
             fasta_file.write(f">{otu_name}\n{sequence}\n")
 
     return output_fasta
 
 # VSEARCH
 def run_vsearch(input_fasta, output_centroids):
-    # 出力ディレクトリを指定
+    # Specify the output directory
     output_dir = "../output/"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    # VSEARCHコマンド
+    # Run VSEARCH
     haplotype_tsv = os.path.join(output_dir, "haplotype_list.tsv")
-    output_centroids_path = os.path.join(output_dir, output_centroids)  # Centroidsの出力パスを設定
+    output_centroids_path = os.path.join(output_dir, output_centroids)  # Set output path for Centroids
     vsearch_cmd = f"vsearch --cluster_fast {input_fasta} -id 1 --centroids {output_centroids_path} --mothur_shared_out {haplotype_tsv}"
     print(f"Running VSEARCH: {vsearch_cmd}")
     subprocess.run(vsearch_cmd, shell=True, check=True)
 
-    # TSVファイルをCSVに変換
+    # Convert TSV to CSV
     haplotype_df = pd.read_csv(haplotype_tsv, sep="\t")
     csv_output_file = os.path.join(output_dir, "haplotype_list.csv")
     haplotype_df.to_csv(csv_output_file, index=False)
@@ -316,7 +316,6 @@ def run_fasttree(input_aligned, output_tree, method="NJ", bootstrap=1000, gamma=
     if method == "NJ":
         fasttree_cmd += " -nj"
     elif method == "ML":
-        # ML法はデフォルト
         pass
     else:
         raise ValueError(f"Invalid method '{method}'. Choose 'ML' or 'NJ'.")
@@ -338,18 +337,18 @@ def run_fasttree(input_aligned, output_tree, method="NJ", bootstrap=1000, gamma=
 # bPTP
 def run_bptp(tree_file, mcmc, thinning, burnin, seed):
     try:
-        # bPTP.pyのパスを構築
+        # Build path for bPTP.py
         bptp_path = os.path.join('/app/PTP/bin', 'bPTP.py')
 
-        # 出力ディレクトリの作成
-        now = datetime.now().strftime('%Y%m%d_%H%M%S')  # 年月日と分秒を取得
+        # Creating the output directory
+        now = datetime.now().strftime('%Y%m%d_%H%M%S')  # Get date, minute and second
         output_dir = os.path.join('../output', f'bPTP_{now}')
-        os.makedirs(output_dir, exist_ok=True)  # ディレクトリを作成（存在する場合はスキップ）
+        os.makedirs(output_dir, exist_ok=True)  # Create directory (skip if exists)
 
-        # 出力ファイル名を設定
+        # Set the output file name
         output_file = os.path.join(output_dir, 'output_base_tree_bptp_output.txt')
 
-        # bPTP.pyを実行するコマンドを構築
+        # Build a command to run bPTP.py
         bptp_command = [
             'xvfb-run', '-a', 'python3', bptp_path,
             '-t', tree_file,
@@ -360,7 +359,7 @@ def run_bptp(tree_file, mcmc, thinning, burnin, seed):
             '-b', str(burnin)
         ]
 
-        # コマンドを実行
+        # Run bPTP command
         print(f"Running bPTP with command: {' '.join(bptp_command)}")
         subprocess.run(bptp_command, check=True)
         print('bPTP analysis complete.')
@@ -369,15 +368,15 @@ def run_bptp(tree_file, mcmc, thinning, burnin, seed):
 
 def run_mptp(tree_file):
     try:
-        # 出力ディレクトリの作成
-        now = datetime.now().strftime('%Y%m%d_%H%M%S')  # 年月日と分秒を取得
+        # Creating the output directory
+        now = datetime.now().strftime('%Y%m%d_%H%M%S')  # Get date, minute and second
         output_dir = os.path.join('../output', f'mPTP_{now}')
-        os.makedirs(output_dir, exist_ok=True)  # ディレクトリを作成（存在する場合はスキップ）
+        os.makedirs(output_dir, exist_ok=True)  # Create directory (skip if exists)
 
-        # 出力ファイル名を設定
-        output_file = os.path.join(output_dir, 'output_base_tree_mptp_output.txt')  # 出力ファイルのパス
+        # Set the output file name
+        output_file = os.path.join(output_dir, 'output_base_tree_mptp_output.txt')  # Output file path
 
-        # mPTPを実行
+        # Run mPTP
         subprocess.run(
             ['xvfb-run', '-a', 'mptp', '-tree_file', tree_file,
              '-output_file', output_file, '-ml', '-single'],
@@ -389,21 +388,21 @@ def run_mptp(tree_file):
 
 output_base = args.output_base if args.output_base else f"{args.input_csv}_output"
 
-if args.onlyp: # 系統解析以降だけ実行するための分岐
+if args.onlyp: # Branch to execute only phylogenetic analysis and later
     input_csv = os.path.join('..', 'input', f"{args.input_csv}")
-    filtered_filename = os.path.join('..', 'output', f"{output_base}_filtered.csv")  # ../output 下に保存
+    filtered_filename = os.path.join('..', 'output', f"{output_base}_filtered.csv")  # Saved under ../output
 
-    if args.class_name:  # --classがあるとき、指定されたclassで絞込
+    if args.class_name:  # If --class option is specified, filter by the specified class.
         filter_by_class(input_csv, filtered_filename, args.class_name)
 
     fasta_filename = os.path.join('..', 'output', f"{output_base}.fasta")
     output_fasta = csv_to_fasta(input_csv, fasta_filename)
 
 else:
-    # 分類データの取得
+    # Obtaining classification infomation
     output_fasta = process_with_progress(args.class_name)
 
-# --treeオプションがあるとき：VSEARCH→MAFFT→FastTreeで系統樹作成
+# When the --tree option is present: Create a phylogenetic tree using VSEARCH→MAFFT→FastTree
 if args.tree:
     vsearch_output = os.path.join("../output/", "output_vsearch.fasta")
     aligned_fasta = f"{output_base}_aligned.fasta"
@@ -419,7 +418,7 @@ if args.tree:
     mafft_output = os.path.join("../output/", aligned_fasta)
     run_fasttree(mafft_output, tree_file, method=args.method, bootstrap=args.bootstrap, gamma=args.gamma, outgroup=args.outgroup)
 
-    # NEXUSファイルの書き出し
+    # Exporting NEXUS files
     nwk = Phylo.read(f"../output/{tree_file}", 'newick')
     Phylo.write(nwk, f"../output/{output_base}_tree.nex", 'nexus')
     print("Newick file from FastTree has been converted to NEXUS format.")
