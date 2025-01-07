@@ -42,6 +42,7 @@
       ```
       blastn -db {検索対象DB名}.nc -query {BLAST検索をかけたい配列のFASTAファイル名} -out {出力したいファイル名}.csv -outfmt "10 qseqid sallacc pident qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sallacc,pident,qseq' {出力したいファイル名}.csv
       ```
+      - ※`sed`コマンドはLinuxコマンドなので、他OSの場合は注意
       - 例：`2.`で作成したDBに対して、BLAST検索をかけたいFASTAファイル`query_sequence.fasta`でBLAST検索したい場合
       ```
       blastn -db animalia_16S_db.nc -query query_sequence.fasta -out output_quried.csv -outfmt "10 qseqid sallacc pident qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sallacc,pident,qseq' output_quried.csv
