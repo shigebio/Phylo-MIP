@@ -1,9 +1,14 @@
 services:
   app:
-    image: name_taxonomy_create_tree #仮名、プログラム名にあわせる
-    build: .
+    container_name: micum
+    image: micum:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
     volumes:
-      - ./app/name_taxonomy_create_tree.py:/app/name_taxonomy_create_tree.py
+      - ./app/MICUM.py:/app/MICUM.py
       - ./input:/input
       - ./output:/output
     stdin_open: true
