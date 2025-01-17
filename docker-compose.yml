@@ -1,7 +1,7 @@
 services:
   app:
-    container_name: MICUM
-    image: MICUM:latest
+    container_name: micum
+    image: micum:latest
     build:
       context: .
       dockerfile: Dockerfile
