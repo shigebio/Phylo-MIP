@@ -169,7 +169,7 @@ CSV形式です
            </details>
    2. FASTAファイルとCSVファイル出力だけしたい場合
       - `python3 MICUM.py {入力するCSVファイル名} {出力したいファイル名}`
-        - 例：`python MICUM.py your_data.csv output`
+        - 例：`python3 MICUM.py your_data.csv output`
 
 7. コンテナの停止
    - `sudo docker-compose down`
