@@ -42,8 +42,21 @@ bptp_group.add_argument('--seed', type=int, default=default_seed, help='Random s
 
 args = parser.parse_args()
 
+# For filename sanitization
+invalid_chars = r'[<>:"/\\|?*]'
+
 # Import CSV
-df = pd.read_csv(os.path.join('..', 'input', args.input_csv))
+input_filename = args.input_csv
+input_path = os.path.join('..', 'input', input_filename)
+if not os.path.exists(input_path):
+    print(f"File not found in 'input' directory. Checking the provided path: {input_filename}")
+    input_path = input_filename
+
+try:
+        df = pd.read_csv(input_path)
+        print(f"File loaded successfully from {input_path}")
+except Exception as e:
+        print(f"Error reading CSV file: {e}")
 
 # If there are duplicate qseqids, only the number selected from the one with the highest pindent is left
 df = df.sort_values('pident', ascending=False).groupby('qseqid').head(args.top)
@@ -386,10 +399,11 @@ def run_mptp(tree_file):
     except subprocess.CalledProcessError as e:
         print(f"Error running mPTP: {e}")
 
-output_base = args.output_base if args.output_base else f"{args.input_csv}_output"
+sanitized_input_name = re.sub(invalid_chars, '_', f"{args.input_csv}")
+output_base = args.output_base if args.output_base else f"{sanitized_input_name}_output"
 
 if args.onlyp: # Branch to execute only phylogenetic analysis and later
-    input_csv = os.path.join('..', 'input', f"{args.input_csv}")
+    input_csv = os.path.join(input_path)
     filtered_filename = os.path.join('..', 'output', f"{output_base}_filtered.csv")  # Saved under ../output
 
     if args.class_name:  # If --class option is specified, filter by the specified class.
