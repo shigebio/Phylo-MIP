@@ -23,13 +23,13 @@
        ```
        ((((Animalia) AND 16S) NOT whole genome) NOT chromosome) NOT complete genome
        ```
-    
+
      <details><summary>send toリンクの場所</summary>
 
        ![image](https://github.com/user-attachments/assets/7424ed3d-86ba-4afd-96b1-dec875544b98)
 
       </details>
-      
+
 1. `localBLAST`or`BLAST+`でDB作成
    ```
    makeblastdb -in {DBにしたい配列ファイル.fasta} -dbtype nucl -out {任意のDB名}.nc -hash_index -parse_seqids
@@ -61,7 +61,7 @@ CSV形式です
 | 9534cfe94fa593ed74 | AB4567 | 96.032 | GATCGAT・・・ |
 
  <details><summary>各項目について</summary>
-    
+
    - `qseqid`
      - BLAST検索実行時につく通し番号で、クエリ上の通し番号でサンプルごとに割り当てられます
      - ここの値をもとにBLAST結果を`pident`の高い順から選択してデータセットに含めるオプションがあります
@@ -73,7 +73,7 @@ CSV形式です
    - `qseq`
      - BLAST検索に使用したデータの塩基配列
  </details>
-   
+
 - `localBLAST`,`BLAST+`などで検索した後のファイルを使用する想定ですが、上記形式と一致していれば、手動で作成しても問題ないです
 
 ## Installation
@@ -98,71 +98,55 @@ CSV形式です
     ```
 4. 仮想環境の構築
     <details><summary>Windows/Mac</summary>
-       
+
     1. Docker Desktopを起動
          ```
           # dockerの起動確認
           docker version
          ```
-   3. 仮想環境の構築
-        ```
-        docker-compose build
-        ```
-   4. 仮想環境の起動
+
+   2. 仮想環境の構築・起動
         ```
         docker-compose up -d
         ```
-   5. 仮想環境に入る
+   3. 仮想環境に入る
         ```
-        docker exec -it {コンテナ名} /bin/bash
+        docker exec -it micum /bin/bash
         ```
-        - コンテナ名はNAMES
-          ```
-          $ sudo docker container ls
-            CONTAINER ID   IMAGE                       COMMAND       CREATED        STATUS         PORTS     NAMES
-            ca174dd9ea32   name_taxonomy_create_tree   "/bin/bash"   3 months ago   Up 4 minutes             name_taxonomy_create_tree_for_docker-app-1
-          ```
     </details>
 
     <details><summary>Linux</summary>
-       
+
    1. Docker Composeがインストールされていない場合はインストール
-          ```
-          # Docker Composeのインストール
-          sudo apt update
-          sudo apt install docker-compose
-          ```
-   1. 仮想環境の構築
+        ```
+        # Docker Composeのインストール
+        sudo apt update
+        sudo apt install docker-compose
+        ```
+   2. 仮想環境の構築・起動
         ```
         # 実効環境によってはsudoは不要になります
-        sudo docker-compose build
-        ```
-   2. 仮想環境の起動
-        ```
         sudo docker-compose up -d
         ```
    3. 仮想環境に入る
         ```
-        sudo docker exec -it {コンテナ名} /bin/bash
+        sudo docker exec -it micum /bin/bash
         ```
-      - コンテナ名はNAMES
-          ```
-          $ sudo docker container ls
-            CONTAINER ID   IMAGE                       COMMAND       CREATED        STATUS         PORTS     NAMES
-            ca174dd9ea32   name_taxonomy_create_tree   "/bin/bash"   3 months ago   Up 4 minutes             name_taxonomy_create_tree_for_docker-app-1
-          ```
+
     </details>
 
-     - イメージをDocker hubから取得することも可能です(上記手順を行った場合は不要です)
+    ---
+     - イメージをDocker hubから取得することも可能です(上記手順を行った場合は不要です。<b>※最新化されていません</b>)
        - [shigebio/name_taxonomy_create_tree](https://hub.docker.com/r/shigebio/name_taxonomy_create_tree)
      - 仮想環境の起動後はコンソールに表示されているPATHが以下のようになれば大丈夫です
       `root@ca174dd9ea32:/app#`
      - DL or クローンしてきたファイルの`app`フォルダ下に`input`フォルダ、`output`フォルダが作成されていることを確認してください
 5. 事前に用意したCSVファイルを`input`フォルダ下に移動
+   - 直接指定可能
 6. コマンドの実行
    1. 基本のコマンド
-      - `python3 name_taxonomy_create_tree.py {入力するCSVファイル名} --tree {各種オプション}`
-        - 例：`python3 name_taxonomy_create_tree.py your_input.csv --tree --method -ml --bootstrap 250`
+      - `python3 MICUM.py {入力するCSVファイル名} --tree {各種オプション}`
+        - 例：`python3 MICUM.py your_input.csv --tree --method -ml --bootstrap 250`
            <details><summary>オプション</summary>
 
             - `--top` : `qseqid`が同じものを`pident`の上位から1~10まで指定できます
@@ -184,8 +168,8 @@ CSV形式です
                - https://github.com/shigebio/MICUM/pull/6
            </details>
    2. FASTAファイルとCSVファイル出力だけしたい場合
-      - `python3 name_taxonomy_create_tree.py {入力するCSVファイル名} {出力したいファイル名}`
-        - 例：`python name_taxonomy_create_tree.py your_data.csv output`
+      - `python3 MICUM.py {入力するCSVファイル名} {出力したいファイル名}`
+        - 例：`python MICUM.py your_data.csv output`
 
 7. コンテナの停止
    - `sudo docker-compose down`
