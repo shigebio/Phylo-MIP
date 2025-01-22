@@ -213,4 +213,4 @@ CSV format
   </details>
 
 # The problems you have experienced
-→Please [create a new issue]((https://github.com/shigebio/MICUM/issues)) and include the details🙏
+→Please [create a new issue](https://github.com/shigebio/MICUM/issues) and include the details🙏
