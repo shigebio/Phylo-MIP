@@ -97,53 +97,47 @@ CSV形式です
     cd /{path to MICUM}/MICUM
     ```
 4. 仮想環境の構築
-    <details><summary>Windows/Mac</summary>
-
+環境によっては`docker`コマンドの前に`sudo`が必要になります
     1. Docker Desktopを起動
          ```
           # dockerの起動確認
           docker version
+
+          # Docker Composeが無いと表示された場合(Linux)
+          sudo apt update
+          sudo apt install docker-compose
          ```
 
-   2. 仮想環境の構築・起動
+   1. 仮想環境の構築・起動
         ```
         docker-compose up -d
         ```
-   3. 仮想環境に入る
+   2. 仮想環境に入る
         ```
         docker exec -it micum /bin/bash
         ```
-    </details>
-
-    <details><summary>Linux</summary>
-
-   1. Docker Composeがインストールされていない場合はインストール
-        ```
-        # Docker Composeのインストール
-        sudo apt update
-        sudo apt install docker-compose
-        ```
-   2. 仮想環境の構築・起動
-        ```
-        # 実効環境によってはsudoは不要になります
-        sudo docker-compose up -d
-        ```
-   3. 仮想環境に入る
-        ```
-        sudo docker exec -it micum /bin/bash
-        ```
-
-    </details>
-
     ---
-     - イメージをDocker hubから取得することも可能です(上記手順を行った場合は不要です。<b>※最新化されていません</b>)
+     - 2回目以降はⅱ→ⅲの手順で仮想環境の起動→仮想環境に入ることができます。
+     - イメージをDocker hubから取得することも可能です(上記手順を行った場合は不要です<b>※最新化されていません</b>)。
        - [shigebio/name_taxonomy_create_tree](https://hub.docker.com/r/shigebio/name_taxonomy_create_tree)
-     - 仮想環境の起動後はコンソールに表示されているPATHが以下のようになれば大丈夫です
+     - 仮想環境の起動後はコンソールに表示されているPATHが以下のようになれば大丈夫です。
       `root@ca174dd9ea32:/app#`
-     - DL or クローンしてきたファイルの`app`フォルダ下に`input`フォルダ、`output`フォルダが作成されていることを確認してください
-5. 事前に用意したCSVファイルを`input`フォルダ下に移動
+     - DL or クローンしてきたファイルの`app`フォルダ下に`input`フォルダ、`output`フォルダが作成されていることを確認してください。
+
+### プログラムの更新
+
+  ```
+  # update.shのあるパスへ移動
+  cd /path/to/update.sh
+
+  # 更新
+  bash update.sh
+  ```
+
+## How to Use
+1. 事前に用意したCSVファイルを`input`フォルダ下に移動
    - 直接指定可能
-6. コマンドの実行
+2. コマンドの実行
    1. 基本のコマンド
       - `python3 MICUM.py {入力するCSVファイル名} --tree {各種オプション}`
         - 例：`python3 MICUM.py your_input.csv --tree --method -ml --bootstrap 250`
@@ -171,7 +165,7 @@ CSV形式です
       - `python3 MICUM.py {入力するCSVファイル名} {出力したいファイル名}`
         - 例：`python3 MICUM.py your_data.csv output`
 
-7. コンテナの停止
+3. コンテナの停止
    - `sudo docker-compose down`
      - ずっとコンテナ動かしているとメモリ消費しそうなので、停止させておくとよさそうです
      - 再起動は`4. 仮想環境の構築 > 各OS > 2. 仮想環境の起動`参照
