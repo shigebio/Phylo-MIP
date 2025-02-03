@@ -44,19 +44,13 @@
           sudo apt install docker-compose
          ```
 
-   1. 仮想環境の構築・起動
+   1. 仮想環境の構築
         ```
-        docker-compose up -d
-        ```
-   2. 仮想環境に入る
-        ```
-        docker exec -it micum /bin/bash
+        bash setup.sh
         ```
     ---
      - イメージをDocker hubから取得することも可能です(上記手順を行った場合は不要です<b>※最新化されていません</b>)。
        - [shigebio/name_taxonomy_create_tree](https://hub.docker.com/r/shigebio/name_taxonomy_create_tree)
-     - 仮想環境の起動後はコンソールに表示されているPATHが以下のようになれば大丈夫です。
-      `root@abcd1234:/app#`
      - DL or クローンしてきたファイルの`app`フォルダ下に`input`フォルダ、`output`フォルダが作成されていることを確認してください。
 
 ### プログラムの更新方法
@@ -74,33 +68,43 @@
    - 直接指定可能
 2. コマンドの実行
    1. 基本のコマンド
-      - `python3 MICUM.py {入力CSVファイル名} --tree {オプション}`
-        - 例：`python3 MICUM.py your_input.csv --tree --method -ml --bootstrap 250`
-           <details><summary>オプション</summary>
+      ```
+      micum {入力CSVファイル名} --tree {オプション}
+      ```
+      - 例
+        ```
+        micum your_input.csv --tree --method -ml --bootstrap 250
+        ```
+      <details><summary>オプション</summary>
 
-            - `--top` : `qseqid`が同じものを`pident`の上位から1~10まで指定できます
-              - デフォルト：`1`
-            - `--o` : outputファイルの出力名。無い場合はデフォルト名が適用されます
-            - `--class` : 特定の分類群(現段階では綱まで)のみに絞って解析を行うことができます
-              - NCBIやGBIFから取得した分類群情報が書き込まれていない場合は、検索対象にならないので注意が必要です
-              - 手動で`class`カラムを作成・入力することでも使用可能です
-            - `--tree`
-               ```
-               ## 子オプション
-               # --method : 系統樹作成手法の選択ができます。`-ml`でML法になります。
-               # --bootstrap : ブートストラップの反復回数の指定。デフォルト：`250`。
-               # --gamma : ガンマ分布を適用するかどうか。デフォルト：`False`。
-               # --outgroup {OTU名} :  外群の指定
-            - `--onlyp`： 系統解析以降を実行(アライメント→同一ハプロタイプ除去→系統樹作成→種決定解析)
-               - https://github.com/shigebio/MICUM/pull/7
-             - `--bptp` : bPTP解析のオプション
-               - https://github.com/shigebio/MICUM/pull/6
-           </details>
+      - `--top` : `qseqid`が同じものを`pident`の上位から1~10まで指定できます
+        - デフォルト：`1`
+      - `--o` : outputファイルの出力名。無い場合はデフォルト名が適用されます
+      - `--class` : 特定の分類群(現段階では綱まで)のみに絞って解析を行うことができます
+        - NCBIやGBIFから取得した分類群情報が書き込まれていない場合は、検索対象にならないので注意が必要です
+        - 手動で`class`カラムを作成・入力することでも使用可能です
+      - `--tree`
+          ```
+          ## 子オプション
+          # --method : 系統樹作成手法の選択ができます。`-ml`でML法になります。
+          # --bootstrap : ブートストラップの反復回数の指定。デフォルト：`250`。
+          # --gamma : ガンマ分布を適用するかどうか。デフォルト：`False`。
+          # --outgroup {OTU名} :  外群の指定
+      - `--onlyp`： 系統解析以降を実行(アライメント→同一ハプロタイプ除去→系統樹作成→種決定解析)
+          - https://github.com/shigebio/MICUM/pull/7
+        - `--bptp` : bPTP解析のオプション
+          - https://github.com/shigebio/MICUM/pull/6
+      </details>
+
    2. FASTAファイルとCSVファイル出力だけしたい場合
-      - `python3 MICUM.py {入力CSVファイル名} {出力ファイル名}`
-        - 例：`python3 MICUM.py your_data.csv output`
+      ```
+      micum {入力CSVファイル名} {出力ファイル名}
+    - 例
+      ```
+      micum your_data.csv output
+      ```
 
-3. コンテナの停止
+1. コンテナの停止
    - `sudo docker-compose down`
      - ずっとコンテナ動かしているとメモリ消費しそうなので、停止させておくとよさそうです
      - 再起動は`4. 仮想環境の構築 > 各OS > 2. 仮想環境の起動`参照
