@@ -74,7 +74,7 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
           ```
            - Example:
              ```
-             `micum your_input.csv --tree --method -ml --bootstrap 250`
+             micum your_input.csv --tree --method -ml --bootstrap 250
              ```
           <details><summary>Options</summary>
 
