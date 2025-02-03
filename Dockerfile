@@ -2,7 +2,7 @@ FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# 必要なパッケージをインストール
+# Install required packages
 RUN apt-get update && apt-get install -y \
     lsb-release \
     build-essential \
@@ -49,8 +49,8 @@ RUN apt-get update && apt-get install -y \
     rm -rf /var/lib/apt/lists/* && \
     apt-get clean
 
-# Python 3.7 のインストール
-# ubuntuのバージョンの都合上、apt-getだと取れないのでwgetしている
+# Installing Python 3.7
+# Due to the version of ubuntu, I can't get it with apt-get so I'm using wget
 RUN wget https://www.python.org/ftp/python/3.7.15/Python-3.7.15.tgz && \
     tar -xzf Python-3.7.15.tgz && \
     cd Python-3.7.15 && \
@@ -60,31 +60,31 @@ RUN wget https://www.python.org/ftp/python/3.7.15/Python-3.7.15.tgz && \
     ln -s /usr/local/bin/python3.7 /usr/bin/python3 && \
     cd .. && rm -rf Python-3.7.15.tgz Python-3.7.15
 
-# Locales の設定
+# Setting Locales
 RUN locale-gen en_GB.UTF-8
 ENV LANG=en_GB.UTF-8
 ENV LANGUAGE=en_GB:en
 ENV LC_ALL=en_GB.UTF-8
 ENV QT_QPA_PLATFORM=offscreen
 
-# 環境変数設定
+# Setting environment variables
 ENV PYTHONPATH="/usr/local/lib/python3.7/site-packages:$PYTHONPATH"
 
-# pip のアップグレード
+# Upgrading pip
 RUN /usr/local/bin/python3 -m ensurepip && \
     /usr/local/bin/python3 -m pip install --no-cache-dir --upgrade pip
 
-# Python3必要なパッケージをインストール
+# Install the packages in requirements.txt
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
-# PTPをクローンしてビルド
+# Clone and build bPTP
 RUN git clone https://github.com/zhangjiajie/PTP /app/PTP && \
     cd /app/PTP && \
     pip3 install -r requirements.txt && \
     python3 setup.py install
 
-# mPTPをクローンしてビルド・インストール
+# Clone and build mPTP
 RUN git clone https://github.com/Pas-Kapli/mptp.git /app/mptp && \
     cd /app/mptp && \
     ./autogen.sh && \
@@ -95,7 +95,6 @@ RUN git clone https://github.com/Pas-Kapli/mptp.git /app/mptp && \
 RUN mkdir -p /input
 RUN mkdir -p /output
 
-# ワーキングディレクトリの設定
 COPY ./app /app
 
 WORKDIR /app
