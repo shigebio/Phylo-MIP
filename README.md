@@ -45,17 +45,19 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
           sudo apt install docker-compose
          ```
 
-   1. Creating a virtual environment
+   1. Creating and starting a virtual environment
         ```
-        # Mac
-        zsh setup.sh
-
-        # Windows/Linux
-        bash setup.sh
+        docker-compose up -d
+        ```
+   2. Enter the virtual environment
+        ```
+        docker exec -it micum /bin/bash
         ```
     ---
      - You can also get the image from Docker hub (this is not necessary if you have followed the steps above <b>※not up to date</b>).
        - [shigebio/name_taxonomy_create_tree](https://hub.docker.com/r/shigebio/name_taxonomy_create_tree)
+     - After starting the virtual environment, if the PATH displayed on the console is as follows, then everything is fine.
+      `root@abcd1234:/app#`
      - Please make sure that the `input` and `output` folders have been created under the `app` folder of the downloaded or cloned file.
 
 ### How to update the version
@@ -72,15 +74,10 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
 1. Move the CSV file you prepared in advance to the `input` folder.
    - Direct specification is also possible
 2. Executing commands
-      1. Basic command
-          ```
-          micum {Input CSV file name} --tree {Options}
-          ```
-           - Example:
-             ```
-             micum your_input.csv --tree --method -ml --bootstrap 250
-             ```
-          <details><summary>Options</summary>
+   1. Basic commands
+      - `python3 MICUM.py {Input CSV file name} --tree {Options}`
+        - Example: `python3 MICUM.py your_input.csv --tree --method -ml --bootstrap 250`
+           <details><summary>Options</summary>
 
             - `--top` : You can specify 1 to 10 of the top `pident` with the same `qseqid`.
               - Default: `1`
@@ -89,27 +86,22 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
               - Please note that if taxonomic group information obtained from NCBI or GBIF is not entered, it will not be searchable.
               - You can also manually create a `class` column and enter any value.
             - `--tree`
-                ```
-                ## Sub options
-                # --method : You can select the method for constructing a phylogenetic tree. Only `-ml` can be used, which will use the ML method.
-                # --bootstrap : Number of bootstrap iterations. Default: `250`
-                # --gamma : Whether to apply gamma distribution. Default: `False`
-                # --outgroup {OTU name} : Specify the outgroup
+               ```
+               ## Sub options
+               # --method : You can select the method for constructing a phylogenetic tree. Only `-ml` can be used, which will use the ML method.
+               # --bootstrap : Number of bootstrap iterations. Default: `250`
+               # --gamma : Whether to apply gamma distribution. Default: `False`
+               # --outgroup {OTU name} : Specify the outgroup
             - `--onlyp`： Perform phylogenetic analysis and beyond (alignment → removal of identical haplotypes → creation of phylogenetic tree → species determination analysis)
-                - https://github.com/shigebio/MICUM/pull/7
-              - `--bptp` : bPTP Analysis Options
-                - https://github.com/shigebio/MICUM/pull/6
-          </details>
+               - https://github.com/shigebio/MICUM/pull/7
+             - `--bptp` : bPTP Analysis Options
+               - https://github.com/shigebio/MICUM/pull/6
+           </details>
+   2. If you only want to output FASTA and CSV files
+      - `python3 MICUM.py {input CSV file name} {output file name}`
+        - Example: `python3 MICUM.py your_data.csv output`
 
-   1. If you only want to output FASTA and CSV files
-      ```
-      micum {input CSV file name} {output file name}
-    - Example
-      ```
-      micum your_data.csv output
-      ```
-
-1. Stopping a container
+3. Stopping a container
    - `sudo docker-compose down`
      - If you keep running the container, it will consume memory, so it is better to stop it.
      - To reboot, see `4. Building a virtual environment > Each OS > 2. Starting the virtual environment`
@@ -129,7 +121,7 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
 
       </details>
 
-2. Create a database using `localBLAST` or `BLAST+`
+1. Create a database using `localBLAST` or `BLAST+`
    ```
    makeblastdb -in {FASTA file to be treated as DB} -dbtype nucl -out {Any DB name}.nc -hash_index -parse_seqids
    ```
