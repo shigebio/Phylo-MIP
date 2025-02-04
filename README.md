@@ -47,6 +47,10 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
 
    1. Creating a virtual environment
         ```
+        # Mac
+        zsh setup.sh
+
+        # Windows/Linux
         bash setup.sh
         ```
     ---
