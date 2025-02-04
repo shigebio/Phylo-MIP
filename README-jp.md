@@ -46,6 +46,10 @@
 
    1. 仮想環境の構築
         ```
+        # Mac
+        zsh setup.sh
+          
+        # Windows/Linux
         bash setup.sh
         ```
     ---
