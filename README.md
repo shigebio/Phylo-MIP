@@ -177,7 +177,7 @@ CSV format
   - `filtered_{output file name}.festa`
 
 <b>＊CAUTION*
-     Due to the structure of the NCBI database, the taxon information columns may be out of sync when retrieved from the Entez API (NCBI). Please check the taxon information in the file.
+     Due to the structure of the NCBI database, the taxon information columns may be out of sync when retrieved from the Entrez API (NCBI). Please check the taxon information in the file.
 </b>
 
 ### MAFFT aligned file
