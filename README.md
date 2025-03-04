@@ -95,7 +95,12 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
             - `--onlyp`： Perform phylogenetic analysis and beyond (alignment → removal of identical haplotypes → creation of phylogenetic tree → species determination analysis)
                - https://github.com/shigebio/MICUM/pull/7
              - `--bptp` : bPTP Analysis Options
-               - https://github.com/shigebio/MICUM/pull/6
+               ```
+               ## Sub options
+               # --mcmc : You can set the number of MCMC iterations. Only `-ml` can be used, which will use the ML method.
+               # --thinning : You can set the number of samplings. Sampling is performed for each MCMC chain every specified number. Default: `100`
+               # --burnin : Burn-in ratio (0.1~1.0). Default: `0.1`
+               # --seed : The seed you want to assign. The same seed value will give you the same results every time for the same input. The default is a random seed.
            </details>
    2. If you only want to output FASTA and CSV files
       - `python3 MICUM.py {input CSV file name} {output file name}`

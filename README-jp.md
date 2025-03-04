@@ -94,7 +94,12 @@
             - `--onlyp`： 系統解析以降を実行(アライメント→同一ハプロタイプ除去→系統樹作成→種決定解析)
                - https://github.com/shigebio/MICUM/pull/7
              - `--bptp` : bPTP解析のオプション
-               - https://github.com/shigebio/MICUM/pull/6
+               ```
+               ## Sub options
+               # --mcmc : You can set the number of MCMC iterations. Only `-ml` can be used, which will use the ML method.
+               # --thinning : You can set the number of samplings. Sampling is performed for each MCMC chain every specified number. Default: `100`
+               # --burnin : Burn-in ratio (0.1~1.0). Default: `0.1`
+               # --seed : The seed you want to assign. The same seed value will give you the same results every time for the same input. The default is a random seed.
            </details>
    2. FASTAファイルとCSVファイル出力だけしたい場合
       - `python3 MICUM.py {入力CSVファイル名} {出力ファイル名}`
@@ -176,7 +181,7 @@ CSV形式です
 - `--class`オプションあり
   - `filtered_{出力ファイル名}.csv`
   - `filtered_{出力ファイル名}.festa`
- 
+
 <b>＊注意*
      Entrez API(NCBI)から取得したデータはNCCBIのDBの構造上、分類群情報のカラムがずれて取得される可能性がありますので、一度ファイルの分類群情報をチェックしてください
 </b>
