@@ -68,7 +68,7 @@
   ```
 
 ## How to Use
-1. 事前に用意したCSVファイルを`input`フォルダ下に移動(インプット用CSVの作成方法は[こちら](https://github.com/shigebio/MICUM/blob/main/README-jp.md#localblast%E5%AE%9F%E8%A1%8C%E4%BE%8B)を参照)
+1. 事前に用意したCSVファイルを`input`フォルダ下に移動(インプット用CSVの作成方法は[こちら](#input_section)を参照)
    - 直接指定可能
 2. 仮想環境の構築
 環境によっては`docker`コマンドの前に`sudo`が必要になります
