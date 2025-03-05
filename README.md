@@ -35,8 +35,10 @@
     ```
 4. Creating a virtual environment
 Depending on your environment, you may need to use `sudo` before the `docker` command.
-    1. Launch Docker Desktop
+    1. Launch Docker Desktop or Docker Engine
          ```
+          # If you use Docker Engine
+          service docker start
           # Check that docker is running
           docker version
 
@@ -49,15 +51,9 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
         ```
         docker-compose up -d
         ```
-   2. Enter the virtual environment
-        ```
-        docker exec -it micum /bin/bash
-        ```
-    ---
+     - Building a virtual environment takes time.
      - You can also get the image from Docker hub (this is not necessary if you have followed the steps above <b>※not up to date</b>).
        - [shigebio/name_taxonomy_create_tree](https://hub.docker.com/r/shigebio/name_taxonomy_create_tree)
-     - After starting the virtual environment, if the PATH displayed on the console is as follows, then everything is fine.
-      `root@abcd1234:/app#`
      - Please make sure that the `input` and `output` folders have been created under the `app` folder of the downloaded or cloned file.
 
 ### How to update the version
@@ -71,9 +67,27 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
   ```
 
 ## How to Use
-1. Move the CSV file you prepared in advance to the `input` folder.
+1. Move the CSV file you prepared in advance to the `input` folder(See [here]() for how to prepare your CSV file.).
    - Direct specification is also possible
-2. Executing commands
+1. Launch Docker Desktop or Docker Engine
+      ```
+      # If you use Docker Engine
+      service docker start
+      ```
+
+1. Starting a virtual environment
+    ```
+    docker-compose up -d
+    ```
+2. Enter the virtual environment
+    ```
+    docker exec -it micum /bin/bash
+    ```
+    - If it looks like this, you are in a virtual environment.
+    ```
+    root@absd1234:/app#
+    ```
+3. Executing commands
    1. Basic commands
       - `python3 MICUM.py {Input CSV file name} --tree {Options}`
         - Example: `python3 MICUM.py your_input.csv --tree --method -ml --bootstrap 250`
@@ -106,73 +120,76 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
       - `python3 MICUM.py {input CSV file name} {output file name}`
         - Example: `python3 MICUM.py your_data.csv output`
 
-3. Stopping a container
+4. Stopping a container
    - `sudo docker-compose down`
      - If you keep running the container, it will consume memory, so it is better to stop it.
      - To reboot, see `4. Building a virtual environment > Each OS > 2. Starting the virtual environment`
-## Preparing the input files
-- Use the CSV file of the search results output by `localBLAST` or `BLAST+` as the input file.
-### **Example of localBLAST execution**
-#### Creating a database from NCBI data
-1. Search for the sequence file you want to use as a database and click the "send to" button to output it in FASTA format.
-   - Example: Search for mtDNA 16S rRNA regions of animal phyla(https://www.ncbi.nlm.nih.gov/nuccore/advanced)
-       ```
-       ((((Animalia) AND 16S) NOT whole genome) NOT chromosome) NOT complete genome
-       ```
+<details><summary>Preparing the input files</summary>
 
-     <details><summary>The location of the "send to" link</summary>
+   - Use the CSV file of the search results output by `localBLAST` or `BLAST+` as the input file.
+   ## **Example of localBLAST execution**
+   #### Creating a database from NCBI data
+   1. Prepare the processed sequence data using metagenomic analysis tools(e.g. [qiime2](https://qiime2.org/), [USEARCH](https://www.drive5.com/usearch/)...).
+   2. Search for the sequence file you want to use as a database and click the "send to" button to output it in FASTA format.
+      - Example: Search for mtDNA 16S rRNA regions of animal phyla(https://www.ncbi.nlm.nih.gov/nuccore/advanced)
+          ```
+          ((((Animalia) AND 16S) NOT whole genome) NOT chromosome) NOT complete genome
+          ```
 
-       ![image](https://github.com/user-attachments/assets/7424ed3d-86ba-4afd-96b1-dec875544b98)
+        <details><summary>The location of the "send to" link</summary>
 
-      </details>
+          ![image](https://github.com/user-attachments/assets/7424ed3d-86ba-4afd-96b1-dec875544b98)
 
-1. Create a database using `localBLAST` or `BLAST+`
-   ```
-   makeblastdb -in {FASTA file to be treated as DB} -dbtype nucl -out {Any DB name}.nc -hash_index -parse_seqids
-   ```
-    - Example: Creating a database of mtDNA 16S rRNA regions of animal phyla
-     ```
-     makeblastdb -in animalia_16S.fasta -dbtype nucl -out animalia_16S_db.nc -hash_index -parse_seqids
-     ```
-3. Run a BLAST search against the created DB using the FASTA file of the sequence you want to perform a BLAST search on.
+         </details>
+
+   3. Create a database using `localBLAST` or `BLAST+`
       ```
-      blastn -db {Search target database name}.nc -query {The name of the FASTA file containing the sequence you want to perform a BLAST search on.} -out {Output File Name}.csv -outfmt "10 qseqid sallacc pident qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sallacc,pident,qseq' {Output File Name}.csv
+      makeblastdb -in {FASTA file to be treated as DB} -dbtype nucl -out {Any DB name}.nc -hash_index -parse_seqids
       ```
-      - ※The `sed` command is a Linux command, so be careful if you are using another OS.
-      - Example: To perform a BLAST search on the database created in `2.`, use the FASTA file `query_sequence.fasta`.
-      ```
-      blastn -db animalia_16S_db.nc -query query_sequence.fasta -out output_quried.csv -outfmt "10 qseqid sallacc pident qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sallacc,pident,qseq' output_quried.csv
-      ```
-      - Please make sure the order of the items in `-outfmt "10 xx yy"` and `sed -i '1i xx,yy'` is the same.
-      - If the `&& sed command` does not work, you can manually name the columns in the same format as the input file example below.
-      - You can increase the arguments of `-outfmt "10 xx yy zz"` as needed, but at the very least, it will work with `qseqid`, `sallacc`, `pident` and `qseq`.
+       - Example: Creating a database of mtDNA 16S rRNA regions of animal phyla
+        ```
+        makeblastdb -in animalia_16S.fasta -dbtype nucl -out animalia_16S_db.nc -hash_index -parse_seqids
+        ```
+   4. Run a BLAST search against the created DB using the FASTA file of the sequence you want to perform a BLAST search on.
+         ```
+         blastn -db {Search target database name}.nc -query {The name of the FASTA file containing the sequence you want to perform a BLAST search on.} -out {Output File Name}.csv -outfmt "10 qseqid sallacc pident qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sallacc,pident,qseq' {Output File Name}.csv
+         ```
+         - ※The `sed` command is a Linux command, so be careful if you are using another OS.
+         - Example: To perform a BLAST search on the database created in `2.`, use the FASTA file `query_sequence.fasta`.
+         ```
+         blastn -db animalia_16S_db.nc -query query_sequence.fasta -out output_quried.csv -outfmt "10 qseqid sallacc pident qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sallacc,pident,qseq' output_quried.csv
+         ```
+         - Please make sure the order of the items in `-outfmt "10 xx yy"` and `sed -i '1i xx,yy'` is the same.
+         - If the `&& sed command` does not work, you can manually name the columns in the same format as the input file example below.
+         - You can increase the arguments of `-outfmt "10 xx yy zz"` as needed, but at the very least, it will work with `qseqid`, `sallacc`, `pident` and `qseq`.
 
-### Example input file
-CSV format
-| qseqid | sallacc | pident | qseq |
-| ---- | ---- | ---- | ---- |
-| 9534cfe94fa593ed71 | AB1234 | 98.805 | GATCGAT・・・ |
-| 9534cfe94fa593ed72 | AB2345 | 96.016 | GATCGAT・・・ |
-| 9534cfe94fa593ed73 | AB3456 | 96.032 | GATCGAT・・・ |
-| 9534cfe94fa593ed74 | AB4567 | 96.032 | GATCGAT・・・ |
+   ### Example input file
+   CSV format
+   | qseqid | sallacc | pident | qseq |
+   | ---- | ---- | ---- | ---- |
+   | 9534cfe94fa593ed71 | AB1234 | 98.805 | GATCGAT・・・ |
+   | 9534cfe94fa593ed72 | AB2345 | 96.016 | GATCGAT・・・ |
+   | 9534cfe94fa593ed73 | AB3456 | 96.032 | GATCGAT・・・ |
+   | 9534cfe94fa593ed74 | AB4567 | 96.032 | GATCGAT・・・ |
 
- <details><summary>About each column</summary>
+    <details><summary>About each column</summary>
 
-   - `qseqid`
-     - This is a sequence number given when performing a BLAST search. It is assigned to each sample by the sequence number in the query.
-     - There is an option to select BLAST results with high `pident` to include in the dataset based on this value.
-   - `sallacc`
-     - If you use NCBI data in your database, this corresponds to `Accession ID`.
-     - Used to search for species names
-   - `pident`
-     - Match rate between sample sequence and reference sequence output when performing BLAST search
-   - `qseq`
-     - Nucleotide sequences used in BLAST searches
- </details>
+      - `qseqid`
+        - This is a sequence number given when performing a BLAST search. It is assigned to each sample by the sequence number in the query.
+        - There is an option to select BLAST results with high `pident` to include in the dataset based on this value.
+      - `sallacc`
+        - If you use NCBI data in your database, this corresponds to `Accession ID`.
+        - Used to search for species names
+      - `pident`
+        - Match rate between sample sequence and reference sequence output when performing BLAST search
+      - `qseq`
+        - Nucleotide sequences used in BLAST searches
+    </details>
 
-- It is assumed that the files obtained after searching with `localBLAST`, `BLAST+`, etc. will be used, but as long as they match the above format, there is no problem in creating them manually.
+   - It is assumed that the files obtained after searching with `localBLAST`, `BLAST+`, etc. will be used, but as long as they match the above format, there is no problem in creating them manually.
+</details>
 
-## Output
+## Outputs
 ### FASTA file/CSV file of OTUs with assigned species names
 - Without the `--class` option
   - `pre_filtered_{output file name}.csv`
@@ -181,7 +198,7 @@ CSV format
   - `filtered_{output file name}.csv`
   - `filtered_{output file name}.festa`
 
-<b>＊CAUTION*
+<b>＊CAUTION＊
      Due to the structure of the NCBI database, the taxon information columns may be out of sync when retrieved from the Entrez API (NCBI). Please check the taxon information in the file.
 </b>
 

@@ -39,6 +39,9 @@
           # dockerの起動確認
           docker version
 
+          # Docker Engineを利用している場合
+          servise docker start
+
           # Docker Composeが無いと表示された場合(Linux)
           sudo apt update
           sudo apt install docker-compose
@@ -48,15 +51,10 @@
         ```
         docker-compose up -d
         ```
-   2. 仮想環境に入る
-        ```
-        docker exec -it micum /bin/bash
-        ```
     ---
+     - 仮想環境の構築には時間がかかります。
      - イメージをDocker hubから取得することも可能です(上記手順を行った場合は不要です<b>※最新化されていません</b>)。
        - [shigebio/name_taxonomy_create_tree](https://hub.docker.com/r/shigebio/name_taxonomy_create_tree)
-     - 仮想環境の起動後はコンソールに表示されているPATHが以下のようになれば大丈夫です。
-      `root@abcd1234:/app#`
      - DL or クローンしてきたファイルの`app`フォルダ下に`input`フォルダ、`output`フォルダが作成されていることを確認してください。
 
 ### プログラムの更新方法
@@ -70,9 +68,29 @@
   ```
 
 ## How to Use
-1. 事前に用意したCSVファイルを`input`フォルダ下に移動
+1. 事前に用意したCSVファイルを`input`フォルダ下に移動(インプット用CSVの作成方法は[こちら]()を参照)
    - 直接指定可能
-2. コマンドの実行
+2. 仮想環境の構築
+環境によっては`docker`コマンドの前に`sudo`が必要になります
+  1. Docker Desktopを起動
+       ```
+        # Docker Engineを使用する場合
+        service docker start
+       ```
+
+ 1. 仮想環境の起動
+      ```
+      docker-compose up -d
+      ```
+ 2. 仮想環境に入る
+      ```
+      docker exec -it micum /bin/bash
+      ```
+      - 以下のようになれば、仮想環境に入ることができています。
+      ```
+      root@absd1234:/app#
+      ```
+1. コマンドの実行
    1. 基本のコマンド
       - `python3 MICUM.py {入力CSVファイル名} --tree {オプション}`
         - 例：`python3 MICUM.py your_input.csv --tree --method -ml --bootstrap 250`
@@ -105,59 +123,57 @@
       - `python3 MICUM.py {入力CSVファイル名} {出力ファイル名}`
         - 例：`python3 MICUM.py your_data.csv output`
 
-3. コンテナの停止
+2. コンテナの停止
    - `sudo docker-compose down`
-     - ずっとコンテナ動かしているとメモリ消費しそうなので、停止させておくとよさそうです
-     - 再起動は`4. 仮想環境の構築 > 各OS > 2. 仮想環境の起動`参照
+     - ずっとコンテナ動かしているとメモリ消費しそうなので、停止させておくとよさそうです・
+<details><summary>入力ファイルの準備</summary>
 
-## 入力ファイルの準備
-- `localBLAST`or`BLAST+`で出力した検索結果のCSVファイルを入力ファイルとして使用します
-### **localBLAST実行例**
-※このあたりは、責務の範疇でないので後で消してqiitaなどに載せようかと考えています
-#### NCBIのデータからDBの作成
-1. DBとして使用したい配列ファイルを検索し、send toボタンからFASTA形式で出力
-   - 例：動物門のmtDNA 16S rRNA領域を検索(https://www.ncbi.nlm.nih.gov/nuccore/advanced)
-       ```
-       ((((Animalia) AND 16S) NOT whole genome) NOT chromosome) NOT complete genome
-       ```
+- `localBLAST`or`BLAST+`で出力した検索結果のCSVファイルを入力ファイルとして使用します。
+   ## **localBLAST実行例**
+   ### NCBIのデータからDBの作成
+   1. メタゲノム解析ツール(e.g. [qiime2](https://qiime2.org/), [USEARCH](https://www.drive5.com/usearch/)...)を利用して、localBLASTに使用可能な配列データを作成してください。
+   2. DBとして使用したい配列ファイルを検索し、send toボタンからFASTA形式で出力
+      - 例：動物門のmtDNA 16S rRNA領域を検索(https://www.ncbi.nlm.nih.gov/nuccore/advanced)
+          ```
+          ((((Animalia) AND 16S) NOT whole genome) NOT chromosome) NOT complete genome
+          ```
 
-     <details><summary>send toリンクの場所</summary>
+      <details><summary>send toリンクの場所</summary>
 
-       ![image](https://github.com/user-attachments/assets/7424ed3d-86ba-4afd-96b1-dec875544b98)
-
+        ![image](https://github.com/user-attachments/assets/7424ed3d-86ba-4afd-96b1-dec875544b98)
       </details>
 
-1. `localBLAST`or`BLAST+`でDB作成
-   ```
-   makeblastdb -in {DBとして扱いたいFASTAファイル} -dbtype nucl -out {任意のDB名}.nc -hash_index -parse_seqids
-   ```
-    - 例：動物門のmtDNA 16S rRNA領域をDBにする
-     ```
-     makeblastdb -in animalia_16S.fasta -dbtype nucl -out animalia_16S_db.nc -hash_index -parse_seqids
-     ```
-3. 作成したDBに対してBLAST検索をかけたい配列のFASTAファイルでBLAST検索
+   3. `localBLAST`or`BLAST+`でDB作成
       ```
-      blastn -db {検索対象DB名}.nc -query {BLAST検索をしたい配列を含むFASTAファイル名} -out {出力ファイル名}.csv -outfmt "10 qseqid sallacc pident qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sallacc,pident,qseq' {出力ファイル名}.csv
+      makeblastdb -in {DBとして扱いたいFASTAファイル} -dbtype nucl -out {任意のDB名}.nc -hash_index -parse_seqids
       ```
-      - ※`sed`コマンドはLinuxコマンドなので、他OSの場合は注意
-      - 例：`2.`で作成したDBに対して、BLAST検索をかけたいFASTAファイル`query_sequence.fasta`でBLAST検索したい場合
-      ```
-      blastn -db animalia_16S_db.nc -query query_sequence.fasta -out output_quried.csv -outfmt "10 qseqid sallacc pident qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sallacc,pident,qseq' output_quried.csv
-      ```
-      - `-outfmt "10 xx yy"`と`sed -i '1i xx,yy'`の項目と順番は揃えてください
-      - `&& sed`コマンドが通らない場合は、下記入力ファイル例と同じ形式でカラム名を手動でつければ大丈夫です
-      - `-outfmt "10 xx yy zz"`の引数は任意で増やすことができますが、最低限、`qseqid` `sallacc` `pident` `qseq`があれば動きます
+       - 例：動物門のmtDNA 16S rRNA領域をDBにする
+        ```
+        makeblastdb -in animalia_16S.fasta -dbtype nucl -out animalia_16S_db.nc -hash_index -parse_seqids
+        ```
+   4. 作成したDBに対してBLAST検索をかけたい配列のFASTAファイルでBLAST検索
+         ```
+         blastn -db {検索対象DB名}.nc -query {BLAST検索をしたい配列を含むFASTAファイル名} -out {出力ファイル名}.csv -outfmt "10 qseqid sallacc pident qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sallacc,pident,qseq' {出力ファイル名}.csv
+         ```
+         - ※`sed`コマンドはLinuxコマンドなので、他OSの場合は注意
+         - 例：`2.`で作成したDBに対して、BLAST検索をかけたいFASTAファイル`query_sequence.fasta`でBLAST検索したい場合
+         ```
+         blastn -db animalia_16S_db.nc -query query_sequence.fasta -out output_quried.csv -outfmt "10 qseqid sallacc pident qseq" -max_target_seqs 10 -evalue 1e-40 && sed -i '1i qseqid,sallacc,pident,qseq' output_quried.csv
+         ```
+         - `-outfmt "10 xx yy"`と`sed -i '1i xx,yy'`の項目と順番は揃えてください
+         - `&& sed`コマンドが通らない場合は、下記入力ファイル例と同じ形式でカラム名を手動でつければ大丈夫です
+         - `-outfmt "10 xx yy zz"`の引数は任意で増やすことができますが、最低限、`qseqid` `sallacc` `pident` `qseq`があれば動きます
 
-### 入力ファイル例
-CSV形式です
-| qseqid | sallacc | pident | qseq |
-| ---- | ---- | ---- | ---- |
-| 9534cfe94fa593ed71 | AB1234 | 98.805 | GATCGAT・・・ |
-| 9534cfe94fa593ed72 | AB2345 | 96.016 | GATCGAT・・・ |
-| 9534cfe94fa593ed73 | AB3456 | 96.032 | GATCGAT・・・ |
-| 9534cfe94fa593ed74 | AB4567 | 96.032 | GATCGAT・・・ |
+   ### 入力ファイル例
+   CSV形式です
+   | qseqid | sallacc | pident | qseq |
+   | ---- | ---- | ---- | ---- |
+   | 9534cfe94fa593ed71 | AB1234 | 98.805 | GATCGAT・・・ |
+   | 9534cfe94fa593ed72 | AB2345 | 96.016 | GATCGAT・・・ |
+   | 9534cfe94fa593ed73 | AB3456 | 96.032 | GATCGAT・・・ |
+   | 9534cfe94fa593ed74 | AB4567 | 96.032 | GATCGAT・・・ |
 
- <details><summary>各項目について</summary>
+  <details><summary>各項目について</summary>
 
    - `qseqid`
      - BLAST検索実行時につく通し番号で、クエリ上の通し番号でサンプルごとに割り当てられます
@@ -169,9 +185,10 @@ CSV形式です
      - BLAST検索実行時に出力されるサンプル配列とリファレンス配列の一致率
    - `qseq`
      - BLAST検索に使用したデータの塩基配列
- </details>
+  </details>
 
 - `localBLAST`,`BLAST+`などで検索した後のファイルを使用する想定ですが、上記形式と一致していれば、手動で作成しても問題ないです
+</details>
 
 ## 出力
 ### 種名の割りてられたOTUで構成されたFASTAファイル/CSVファイル
@@ -182,7 +199,7 @@ CSV形式です
   - `filtered_{出力ファイル名}.csv`
   - `filtered_{出力ファイル名}.festa`
 
-<b>＊注意*
+<b>＊注意＊
      Entrez API(NCBI)から取得したデータはNCCBIのDBの構造上、分類群情報のカラムがずれて取得される可能性がありますので、一度ファイルの分類群情報をチェックしてください
 </b>
 
