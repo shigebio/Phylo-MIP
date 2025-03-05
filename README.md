@@ -67,7 +67,7 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
   ```
 
 ## How to Use
-1. Move the CSV file you prepared in advance to the `input` folder(See [here]() for how to prepare your CSV file.).
+1. Move the CSV file you prepared in advance to the `input` folder(See [here](https://github.com/shigebio/MICUM?tab=readme-ov-file#example-of-localblast-execution) for how to prepare your CSV file.).
    - Direct specification is also possible
 1. Launch Docker Desktop or Docker Engine
       ```
