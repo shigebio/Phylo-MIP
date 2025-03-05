@@ -67,7 +67,7 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
   ```
 
 ## How to Use
-1. Move the CSV file you prepared in advance to the `input` folder(See [here](https://github.com/shigebio/MICUM?tab=readme-ov-file#example-of-localblast-execution) for how to prepare your CSV file.).
+1. Move the CSV file you prepared in advance to the `input` folder(See [here](#input_section) for how to prepare your CSV file.).
    - Direct specification is also possible
 1. Launch Docker Desktop or Docker Engine
       ```
@@ -124,7 +124,7 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
    - `sudo docker-compose down`
      - If you keep running the container, it will consume memory, so it is better to stop it.
      - To reboot, see `4. Building a virtual environment > Each OS > 2. Starting the virtual environment`
-<details><summary>Preparing the input files</summary>
+<details><summary><div id="input_section">Preparing the input files</div></summary>
 
    - Use the CSV file of the search results output by `localBLAST` or `BLAST+` as the input file.
    ## **Example of localBLAST execution**
