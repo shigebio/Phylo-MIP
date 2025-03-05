@@ -125,7 +125,9 @@
 
 2. コンテナの停止
    - `sudo docker-compose down`
-     - ずっとコンテナ動かしているとメモリ消費しそうなので、停止させておくとよさそうです・
+     - ずっとコンテナ動かしているとメモリ消費しそうなので、停止させておくとよさそうです。
+    
+<div id="input_section"></div>
 <details><summary>入力ファイルの準備</summary>
 
 - `localBLAST`or`BLAST+`で出力した検索結果のCSVファイルを入力ファイルとして使用します。
