@@ -90,7 +90,7 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
 3. Executing commands
    1. Basic commands
       - `python3 MICUM.py {Input CSV file name} --tree {Options}`
-        - Example: `python3 MICUM.py your_input.csv --tree --method -ml --bootstrap 250`
+        - Example: `python3 MICUM.py your_input.csv --tree --method ML --bootstrap 250`
            <details><summary>Options</summary>
 
             - `--top` : You can specify 1 to 10 of the top `pident` with the same `qseqid`.
@@ -102,7 +102,7 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
             - `--tree`
                ```
                ## Sub options
-               # --method : You can select the method for constructing a phylogenetic tree. Only `-ml` can be used, which will use the ML method.
+               # --method : You can select the method for constructing a phylogenetic tree. Only `ML` can be used, which will use the ML method.
                # --bootstrap : Number of bootstrap iterations. Default: `250`
                # --gamma : Whether to apply gamma distribution. Default: `False`
                # --outgroup {OTU name} : Specify the outgroup
@@ -111,7 +111,7 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
              - `--bptp` : bPTP Analysis Options
                ```
                ## Sub options
-               # --mcmc : You can set the number of MCMC iterations. Only `-ml` can be used, which will use the ML method.
+               # --mcmc : You can set the number of MCMC iterations.
                # --thinning : You can set the number of samplings. Sampling is performed for each MCMC chain every specified number. Default: `100`
                # --burnin : Burn-in ratio (0.1~1.0). Default: `0.1`
                # --seed : The seed you want to assign. The same seed value will give you the same results every time for the same input. The default is a random seed.
