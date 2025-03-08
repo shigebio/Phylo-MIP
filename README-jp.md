@@ -7,10 +7,11 @@
 
 ### できること
 - `localBLAST`or`BLAST+`で出力したファイルをもとに種名を含むOTUを持ったFASTAファイルの作成(NCBIのデータで構成されたDBに限られます)
-- 配列のアライメント([MAFFT](https://mafft.cbrc.jp/alignment/server/index.html))
-- ハプロタイプの検出([VSEARCH](https://github.com/torognes/vsearch))
-- 系統樹の作成([FASTTree](https://morgannprice.github.io/fasttree/))
-- 種の区分決定解析([bPTP](https://species.h-its.org/), [mPTP](https://github.com/Pas-Kapli/mptp))
+  - 配列のアライメント([MAFFT](https://mafft.cbrc.jp/alignment/server/index.html))
+  - ハプロタイプの検出([VSEARCH](https://github.com/torognes/vsearch))
+  - 系統樹の作成([FASTTree](https://morgannprice.github.io/fasttree/))
+  - 種の区分決定解析([bPTP](https://species.h-its.org/), [mPTP](https://github.com/Pas-Kapli/mptp))
+- Qiime2 の出力ファイルと MICUM パイプラインの出力ファイルのマージ: <b>merge_data.py</b>
 
 ## Installation
 1. Dockerの導入 ※このあたりも責務の範疇でないので後で消してqiitaなどに載せようかと考えています
@@ -66,8 +67,8 @@
   # 更新
   bash update.sh
   ```
-
-## How to Use
+---
+## How to Use MICUM.py
 1. 事前に用意したCSVファイルを`input`フォルダ下に移動(インプット用CSVの作成方法は[こちら](#input_section)を参照)
    - 直接指定可能
 2. 仮想環境の構築
@@ -126,7 +127,7 @@
 2. コンテナの停止
    - `sudo docker-compose down`
      - ずっとコンテナ動かしているとメモリ消費しそうなので、停止させておくとよさそうです。
-    
+
 <div id="input_section"></div>
 <details><summary>入力ファイルの準備</summary>
 
@@ -240,6 +241,24 @@
     - `output_base_tree_mptp_{出力ファイル名}.txt.svg`
       - ML法によるの解析結果。画像(svg)形式。
   </details>
+
+---
+## How to Use merge_data.py
+1. MICUM.py を実行したときと同じ方法で Docker コンテナを起動し、仮想環境 (MICUM.py を実行したときと同じ仮想環境) に入る。
+   - [MICUM.py の使用方法](https://github.com/shigebio/MICUM?tab=readme-ov-file#how-to-use-micum.py)の手順 2 ～ 4 に従ってください。※MICUM.py を実行するときにこの手順を実行した場合は、この手順を実行する必要はありません。
+2. QiimeとMICUMパイプラインの出力ファイルをinputフォルダに移動する
+3. コマンドの実行
+   - 基本のコマンド
+    ```
+    python3 merge_data.py -q {Qiime output file name} -m {MICUM pipeline output file name} -f {The file format you want to output: csv/tsv}
+    ```
+    <details><summary>オプション</summary>
+
+      - `-o` : 出力ファイル名
+        - Default: 実行時間のprefix
+    </details>
+
+4. 結合後のファイルはoutputファイルに出力されます。
 
 # 使用時に感じた問題点
 →[new issue作成](https://github.com/shigebio/MICUM/issues)して記載いただけると🙏

@@ -7,11 +7,12 @@
 - Designed for phylogenetic analysis using environmental DNA and more ...
 
 ### What we can do
-- Create a FASTA file with OTUs including species names based on the file output by `localBLAST` or `BLAST+` (only for DBs composed of NCBI data)
-- Sequence alignment([MAFFT](https://mafft.cbrc.jp/alignment/server/index.html))
-- Haplotype detection([VSEARCH](https://github.com/torognes/vsearch))
-- Creating a phylogenetic tree([FASTTree](https://morgannprice.github.io/fasttree/))
-- Species classification analysis([bPTP](https://species.h-its.org/), [mPTP](https://github.com/Pas-Kapli/mptp))
+- Create a FASTA file with OTUs including species names based on the file output by `localBLAST` or `BLAST+` (only for DBs composed of NCBI data) : <b>MICUM.py</b>
+  - Sequence alignment([MAFFT](https://mafft.cbrc.jp/alignment/server/index.html))
+  - Haplotype detection([VSEARCH](https://github.com/torognes/vsearch))
+  - Creating a phylogenetic tree([FASTTree](https://morgannprice.github.io/fasttree/))
+  - Species classification analysis([bPTP](https://species.h-its.org/), [mPTP](https://github.com/Pas-Kapli/mptp))
+- Merging the output file of Qiime2 and the output file of MICUM pipline : <b>merge_data.py</b>
 
 ## Installation
 1. Installing Docker
@@ -65,8 +66,8 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
   # Update
   bash update.sh
   ```
-
-## How to Use
+---
+## How to Use MICUM.py
 1. Move the CSV file you prepared in advance to the `input` folder(See [here](#input_section) for how to prepare your CSV file.).
    - Direct specification is also possible
 1. Launch Docker Desktop or Docker Engine
@@ -91,7 +92,7 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
    1. Basic commands
       - `python3 MICUM.py {Input CSV file name} --tree {Options}`
         - Example: `python3 MICUM.py your_input.csv --tree --method -ml --bootstrap 250`
-           <details><summary>Options</summary>
+           <details><summary>More Options</summary>
 
             - `--top` : You can specify 1 to 10 of the top `pident` with the same `qseqid`.
               - Default: `1`
@@ -124,7 +125,7 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
    - `sudo docker-compose down`
      - If you keep running the container, it will consume memory, so it is better to stop it.
      - To reboot, see `4. Building a virtual environment > Each OS > 2. Starting the virtual environment`
-    
+
 <div id="input_section"></div>
 <details><summary>Preparing the input files</summary>
 
@@ -239,6 +240,24 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
     - `output_base_tree_mptp_{output file name}.txt.svg`
       - Analysis results using the ML method. Image (svg) format.
   </details>
+
+---
+## How to Use merge_data.py
+1. Start the Docker container in the same way as when you run MICUM.py, and enter the virtual environment(same virtual environment as when you run MICUM.py).
+   - Please follow steps 2 to 4 in [How to Use MICUM.py](https://github.com/shigebio/MICUM?tab=readme-ov-file#how-to-use-micum.py). ※if you did so when running MICUM.py, you do not need to do this.
+2. Move the output files of Qiime and MICUM pipeline to the input folder.
+3. Executing commands
+   - Basic commands
+    ```
+    python3 merge_data.py -q {Qiime output file name} -m {MICUM pipeline output file name} -f {The file format you want to output: csv/tsv}
+    ```
+    <details><summary>More Options</summary>
+
+      - `-o` : output file name.
+        - Default: time plefix on executed
+    </details>
+
+4. The merged file will be output to output file.
 
 # The problems you have experienced
 →Please [create a new issue](https://github.com/shigebio/MICUM/issues) and include the details🙏
