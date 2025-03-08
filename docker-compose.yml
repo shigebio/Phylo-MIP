@@ -9,6 +9,7 @@ services:
       - "8080:8080"
     volumes:
       - ./app/MICUM.py:/app/MICUM.py
+      - ./app/merge_data.py:/app/merge_data.py
       - ./input:/input
       - ./output:/output
     stdin_open: true
