@@ -94,7 +94,7 @@
 1. コマンドの実行
    1. 基本のコマンド
       - `python3 MICUM.py {入力CSVファイル名} --tree {オプション}`
-        - 例：`python3 MICUM.py your_input.csv --tree --method -ml --bootstrap 250`
+        - 例：`python3 MICUM.py your_input.csv --tree --method ML --bootstrap 250`
            <details><summary>オプション</summary>
 
             - `--top` : `qseqid`が同じものを`pident`の上位から1~10まで指定できます
@@ -106,7 +106,7 @@
             - `--tree`
                ```
                ## 子オプション
-               # --method : 系統樹作成手法の選択ができます。`-ml`でML法になります。
+               # --method : 系統樹作成手法の選択ができます。`ML`でML法になります。
                # --bootstrap : ブートストラップの反復回数の指定。デフォルト：`250`。
                # --gamma : ガンマ分布を適用するかどうか。デフォルト：`False`。
                # --outgroup {OTU名} :  外群の指定
@@ -115,10 +115,10 @@
              - `--bptp` : bPTP解析のオプション
                ```
                ## Sub options
-               # --mcmc : You can set the number of MCMC iterations. Only `-ml` can be used, which will use the ML method.
-               # --thinning : You can set the number of samplings. Sampling is performed for each MCMC chain every specified number. Default: `100`
-               # --burnin : Burn-in ratio (0.1~1.0). Default: `0.1`
-               # --seed : The seed you want to assign. The same seed value will give you the same results every time for the same input. The default is a random seed.
+               # --mcmc : MCMC chainの回数を設定できます。デフォルト：100000
+               # --thinning : サンプリング数を設定できます。サンプリングは、指定された数ごとに各 MCMC チェーンに対して実行されます。デフォルト: `100` = 100回ごとに1回サンプリング
+               # --burnin : burn-in率 (0.1~1.0)。デフォルト: `0.1`
+               # --seed : 割り当てるシード。同じシード値を指定すると、同じ入力に対して毎回同じ結果が得られます。デフォルトはランダム シードです。
            </details>
    2. FASTAファイルとCSVファイル出力だけしたい場合
       - `python3 MICUM.py {入力CSVファイル名} {出力ファイル名}`
