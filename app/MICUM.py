@@ -425,12 +425,12 @@ def extract_species_data(file_path):
         while i < len(lines):
             line = lines[i].strip()
 
-            # 最初に species number だけを検索
+            # Search only for species number
             species_match = re.search(r'Species\s+(\d+)', line)
             if species_match:
                 current_species = species_match.group(1)
 
-                # 次に support 値を検索（存在する場合）
+                # Search for support values(for results of bPTP)
                 support_match = re.search(r'\(support\s+=\s+([\d\.]+)\)', line)
                 current_support = support_match.group(1) if support_match else None
 
@@ -570,8 +570,9 @@ def process_ptp_outputs():
             bptp_ml_support.update(ml_support_data)
 
     # Process mPTP files
+    # Considering the possibility of extracting some value from the mPTP results. NOTE: Extensibility
     mptp_data = {}
-    mptp_support = {}  # mPTP でもサポート値を格納できるようにする
+    mptp_support = {}
 
     for mptp_dir in mptp_dirs:
         # Find all text files
