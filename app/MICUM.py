@@ -402,16 +402,21 @@ def run_mptp(tree_file):
 
 def extract_species_data(file_path):
     """
-    Extract species grouping data from PTP output files.
+    Extract species grouping data and support values from PTP output files.
 
     Args:
         file_path: Path to the PTP output file
 
     Returns:
-        Dictionary mapping qseqid to species number
+        Tuple of two dictionaries:
+        - Dictionary mapping qseqid to species number
+        - Dictionary mapping qseqid to support value (may be None for mPTP)
     """
     species_data = {}
+    support_data = {}
     current_species = None
+    current_support = None
+
     try:
         with open(file_path, 'r') as f:
             lines = f.readlines()
@@ -420,10 +425,15 @@ def extract_species_data(file_path):
         while i < len(lines):
             line = lines[i].strip()
 
-            # Search the Species {N} line
+            # 最初に species number だけを検索
             species_match = re.search(r'Species\s+(\d+)', line)
             if species_match:
                 current_species = species_match.group(1)
+
+                # 次に support 値を検索（存在する場合）
+                support_match = re.search(r'\(support\s+=\s+([\d\.]+)\)', line)
+                current_support = support_match.group(1) if support_match else None
+
                 i += 1
 
                 # Processing patterns with support values
@@ -437,11 +447,13 @@ def extract_species_data(file_path):
                             if seq_id:
                                 qseqid = seq_id.split('_')[0] if '_' in seq_id else seq_id
                                 species_data[qseqid] = current_species
+                                support_data[qseqid] = current_support  # Store support value (may be None)
                     # A pattern with one ID per line
                     elif '_' in next_line and not re.search(r'Species\s+\d+', next_line):
                         seq_id = next_line.strip()
                         qseqid = seq_id.split('_')[0] if '_' in seq_id else seq_id
                         species_data[qseqid] = current_species
+                        support_data[qseqid] = current_support  # Store support value (may be None)
 
                         # Check whether the next line is the same Species ID
                         j = i + 1
@@ -452,6 +464,7 @@ def extract_species_data(file_path):
                                 seq_id = next_line.strip()
                                 qseqid = seq_id.split('_')[0] if '_' in seq_id else seq_id
                                 species_data[qseqid] = current_species
+                                support_data[qseqid] = current_support  # Store support value (may be None)
                                 j += 1
                             else:
                                 break
@@ -461,16 +474,18 @@ def extract_species_data(file_path):
     except Exception as e:
         print(f"Error processing file {file_path}: {e}")
 
-    return species_data
+    return species_data, support_data
 
-def update_csv_with_species_data(csv_path, bptp_bayes_data, bptp_ml_data, mptp_data):
+def update_csv_with_species_data(csv_path, bptp_bayes_data, bptp_bayes_support, bptp_ml_data, bptp_ml_support, mptp_data):
     """
-    Update CSV files with species grouping information from PTP analyses.
+    Update CSV files with species grouping information and support values from PTP analyses.
 
     Args:
         csv_path: Path to the CSV file to update
         bptp_bayes_data: Dictionary mapping qseqid to bPTP Bayesian species
+        bptp_bayes_support: Dictionary mapping qseqid to bPTP Bayesian support values
         bptp_ml_data: Dictionary mapping qseqid to bPTP ML species
+        bptp_ml_support: Dictionary mapping qseqid to bPTP ML support values
         mptp_data: Dictionary mapping qseqid to mPTP species
     """
     try:
@@ -480,8 +495,12 @@ def update_csv_with_species_data(csv_path, bptp_bayes_data, bptp_ml_data, mptp_d
         # Add new columns if they don't exist
         if 'bPTP_Bayesian_Partitioned_Species' not in df.columns:
             df['bPTP_Bayesian_Partitioned_Species'] = None
+        if 'PTPhSupport_support' not in df.columns:
+            df['PTPhSupport_support'] = None
         if 'bPTP_ML_Partitioned_Species' not in df.columns:
             df['bPTP_ML_Partitioned_Species'] = None
+        if 'PTPML_support' not in df.columns:
+            df['PTPML_support'] = None
         if 'mPTP_Partitioned_Species' not in df.columns:
             df['mPTP_Partitioned_Species'] = None
 
@@ -490,14 +509,16 @@ def update_csv_with_species_data(csv_path, bptp_bayes_data, bptp_ml_data, mptp_d
             qseqid = str(row['qseqid'])
             if qseqid in bptp_bayes_data:
                 df.at[index, 'bPTP_Bayesian_Partitioned_Species'] = bptp_bayes_data[qseqid]
+                df.at[index, 'PTPhSupport_support'] = bptp_bayes_support.get(qseqid)
             if qseqid in bptp_ml_data:
                 df.at[index, 'bPTP_ML_Partitioned_Species'] = bptp_ml_data[qseqid]
+                df.at[index, 'PTPML_support'] = bptp_ml_support.get(qseqid)
             if qseqid in mptp_data:
                 df.at[index, 'mPTP_Partitioned_Species'] = mptp_data[qseqid]
 
         # Save the updated CSV
         df.to_csv(csv_path, index=False)
-        print(f"Updated {csv_path} with PTP species information")
+        print(f"Updated {csv_path} with PTP species information and support values")
     except Exception as e:
         print(f"Error updating CSV file {csv_path}: {e}")
 
@@ -527,38 +548,45 @@ def process_ptp_outputs():
 
     # Process bPTP files
     bptp_bayes_data = {}
+    bptp_bayes_support = {}
     bptp_ml_data = {}
+    bptp_ml_support = {}
 
     for bptp_dir in bptp_dirs:
         # Find the Bayesian support partition file
         bayes_files = glob.glob(os.path.join(bptp_dir, '*.PTPhSupportPartition.txt'))
         for bayes_file in bayes_files:
             print(f"Processing bPTP Bayesian file: {bayes_file}")
-            bayes_species_data = extract_species_data(bayes_file)
+            bayes_species_data, bayes_support_data = extract_species_data(bayes_file)
             bptp_bayes_data.update(bayes_species_data)
+            bptp_bayes_support.update(bayes_support_data)
 
         # Find the ML partition file
         ml_files = glob.glob(os.path.join(bptp_dir, '*.PTPMLPartition.txt'))
         for ml_file in ml_files:
             print(f"Processing bPTP ML file: {ml_file}")
-            ml_species_data = extract_species_data(ml_file)
+            ml_species_data, ml_support_data = extract_species_data(ml_file)
             bptp_ml_data.update(ml_species_data)
+            bptp_ml_support.update(ml_support_data)
 
     # Process mPTP files
     mptp_data = {}
+    mptp_support = {}  # mPTP でもサポート値を格納できるようにする
 
     for mptp_dir in mptp_dirs:
         # Find all text files
         mptp_files = glob.glob(os.path.join(mptp_dir, '*.txt'))
         for mptp_file in mptp_files:
             print(f"Processing mPTP file: {mptp_file}")
-            species_data = extract_species_data(mptp_file)
+            species_data, support_data = extract_species_data(mptp_file)
             mptp_data.update(species_data)
+            mptp_support.update(support_data)
 
     # Update all CSV files
     for csv_file in csv_files:
         print(f"Updating CSV file: {csv_file}")
-        update_csv_with_species_data(csv_file, bptp_bayes_data, bptp_ml_data, mptp_data)
+        update_csv_with_species_data(csv_file, bptp_bayes_data, bptp_bayes_support,
+                                    bptp_ml_data, bptp_ml_support, mptp_data)
 
     print("PTP output processing complete!")
 
