@@ -1,4 +1,4 @@
-# MICUM(Moleculer Identification pipeline Computational Unit Manager：仮称)
+# MICUM(Moleculer Identification pipeline Computational Unit Manager)
 ## これはなに
 - 系統解析～種の判定を簡易的かつほぼ自動的に行うことを目標に作成したパイプラインツールです
 - 仮想環境の構成にDockerを使用しており、使用者のOSや環境に依存しません
@@ -93,40 +93,53 @@
       ```
 1. コマンドの実行
    1. 基本のコマンド
-      - `python3 MICUM.py {入力CSVファイル名} --tree {オプション}`
-        - 例：`python3 MICUM.py your_input.csv --tree --method ML --bootstrap 250`
-           <details><summary>オプション</summary>
+      ```
+      python3 MICUM.py {入力CSVファイル名} --tree {オプション}
+      ```
+      例
+      ```
+      python3 MICUM.py your_input.csv --tree --method ML --bootstrap 250
+      ```
+        <details><summary>オプション</summary>
 
-            - `--top` : `qseqid`が同じものを`pident`の上位から1~10まで指定できます
-              - デフォルト：`1`
-            - `--o` : outputファイルの出力名。無い場合はデフォルト名が適用されます
-            - `--class` : 特定の分類群(現段階では綱まで)のみに絞って解析を行うことができます
-              - NCBIやGBIFから取得した分類群情報が書き込まれていない場合は、検索対象にならないので注意が必要です
-              - 手動で`class`カラムを作成・入力することでも使用可能です
-            - `--tree`
-               ```
-               ## 子オプション
-               # --method : 系統樹作成手法の選択ができます。`ML`でML法になります。
-               # --bootstrap : ブートストラップの反復回数の指定。デフォルト：`250`。
-               # --gamma : ガンマ分布を適用するかどうか。デフォルト：`False`。
-               # --outgroup {OTU名} :  外群の指定
-            - `--onlyp`： 系統解析以降を実行(アライメント→同一ハプロタイプ除去→系統樹作成→種決定解析)
-               - https://github.com/shigebio/MICUM/pull/7
-             - `--bptp` : bPTP解析のオプション
-               ```
-               ## Sub options
-               # --mcmc : MCMC chainの回数を設定できます。デフォルト：100000
-               # --thinning : サンプリング数を設定できます。サンプリングは、指定された数ごとに各 MCMC チェーンに対して実行されます。デフォルト: `100` = 100回ごとに1回サンプリング
-               # --burnin : burn-in率 (0.1~1.0)。デフォルト: `0.1`
-               # --seed : 割り当てるシード。同じシード値を指定すると、同じ入力に対して毎回同じ結果が得られます。デフォルトはランダム シードです。
-           </details>
+        - `--top` : `qseqid`が同じものを`pident`の上位から1~10まで指定できます
+          - デフォルト：`1`
+        - `--o` : outputファイルの出力名。無い場合はデフォルト名が適用されます
+        - `--class` : 特定の分類群(現段階では綱まで)のみに絞って解析を行うことができます
+          - NCBIやGBIFから取得した分類群情報が書き込まれていない場合は、検索対象にならないので注意が必要です
+          - 手動で`class`カラムを作成・入力することでも使用可能です
+        - `--tree`
+            ```
+            ## 子オプション
+            # --method : 系統樹作成手法の選択ができます。`ML`でML法になります。
+            # --bootstrap : ブートストラップの反復回数の指定。デフォルト：`250`。
+            # --gamma : ガンマ分布を適用するかどうか。デフォルト：`False`。
+            # --outgroup {OTU名} :  外群の指定
+        - `--onlyp`： 系統解析以降を実行(アライメント→同一ハプロタイプ除去→系統樹作成→種決定解析)
+            - https://github.com/shigebio/MICUM/pull/7
+          - `--bptp` : bPTP解析のオプション
+            ```
+            ## Sub options
+            # --mcmc : MCMC chainの回数を設定できます。デフォルト：100000
+            # --thinning : サンプリング数を設定できます。サンプリングは、指定された数ごとに各 MCMC チェーンに対して実行されます。デフォルト: `100` = 100回ごとに1回サンプリング
+            # --burnin : burn-in率 (0.1~1.0)。デフォルト: `0.1`
+            # --seed : 割り当てるシード。同じシード値を指定すると、同じ入力に対して毎回同じ結果が得られます。デフォルトはランダム シードです。
+        </details>
+        <br>
    2. FASTAファイルとCSVファイル出力だけしたい場合
-      - `python3 MICUM.py {入力CSVファイル名} {出力ファイル名}`
-        - 例：`python3 MICUM.py your_data.csv output`
+      ```
+      python3 MICUM.py {入力CSVファイル名} {出力ファイル名}
+      ```
+      例
+      ```
+      python3 MICUM.py your_data.csv output
+      ```
 
 2. コンテナの停止
-   - `sudo docker-compose down`
-     - ずっとコンテナ動かしているとメモリ消費しそうなので、停止させておくとよさそうです。
+   ```
+   sudo docker-compose down
+   ```
+     - 常にコンテナを動かしているとメモリ消費しそうなので、停止させておくとよさそうです。
 
 <div id="input_section"></div>
 <details><summary>入力ファイルの準備</summary>
