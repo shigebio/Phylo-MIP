@@ -90,39 +90,53 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
     ```
 3. Executing commands
    1. Basic commands
-      - `python3 MICUM.py {Input CSV file name} --tree {Options}`
-        - Example: `python3 MICUM.py your_input.csv --tree --method ML --bootstrap 250`
-           <details><summary>Options</summary>
+      ```
+      python3 MICUM.py {Input CSV file name} --tree {Options}
+      ```
+      Example
+      ```
+      python3 MICUM.py your_input.csv --tree --method ML --bootstrap 250
+      ```
 
-            - `--top` : You can specify 1 to 10 of the top `pident` with the same `qseqid`.
-              - Default: `1`
-            - `--o` : Output name of the output file. If not present, the default name is applied.
-            - `--class` : Analysis can be limited to specific taxa (currently only classes).
-              - Please note that if taxonomic group information obtained from NCBI or GBIF is not entered, it will not be searchable.
-              - You can also manually create a `class` column and enter any value.
-            - `--tree`
-               ```
-               ## Sub options
-               # --method : You can select the method for constructing a phylogenetic tree. Only `ML` can be used, which will use the ML method.
-               # --bootstrap : Number of bootstrap iterations. Default: `250`
-               # --gamma : Whether to apply gamma distribution. Default: `False`
-               # --outgroup {OTU name} : Specify the outgroup
-            - `--onlyp`： Perform phylogenetic analysis and beyond (alignment → removal of identical haplotypes → creation of phylogenetic tree → species determination analysis)
-               - https://github.com/shigebio/MICUM/pull/7
-             - `--bptp` : bPTP Analysis Options
-               ```
-               ## Sub options
-               # --mcmc : You can set the number of MCMC iterations.
-               # --thinning : You can set the number of samplings. Sampling is performed for each MCMC chain every specified number. Default: `100`
-               # --burnin : Burn-in ratio (0.1~1.0). Default: `0.1`
-               # --seed : The seed you want to assign. The same seed value will give you the same results every time for the same input. The default is a random seed.
-           </details>
+        <details><summary>Options</summary>
+
+        - `--top` : You can specify 1 to 10 of the top `pident` with the same `qseqid`.
+          - Default: `1`
+        - `--o` : Output name of the output file. If not present, the default name is applied.
+        - `--class` : Analysis can be limited to specific taxa (currently only classes).
+          - Please note that if taxonomic group information obtained from NCBI or GBIF is not entered, it will not be searchable.
+          - You can also manually create a `class` column and enter any value.
+        - `--tree`
+            ```
+            ## Sub options
+            # --method : You can select the method for constructing a phylogenetic tree. Only `ML` can be used, which will use the ML method.
+            # --bootstrap : Number of bootstrap iterations. Default: `250`
+            # --gamma : Whether to apply gamma distribution. Default: `False`
+            # --outgroup {OTU name} : Specify the outgroup
+        - `--onlyp`： Perform phylogenetic analysis and beyond (alignment → removal of identical haplotypes → creation of phylogenetic tree → species determination analysis)
+            - https://github.com/shigebio/MICUM/pull/7
+          - `--bptp` : bPTP Analysis Options
+            ```
+            ## Sub options
+            # --mcmc : You can set the number of MCMC iterations.
+            # --thinning : You can set the number of samplings. Sampling is performed for each MCMC chain every specified number. Default: `100`
+            # --burnin : Burn-in ratio (0.1~1.0). Default: `0.1`
+            # --seed : The seed you want to assign. The same seed value will give you the same results every time for the same input. The default is a random seed.
+        </details>
+        <br>
    2. If you only want to output FASTA and CSV files
-      - `python3 MICUM.py {input CSV file name} {output file name}`
-        - Example: `python3 MICUM.py your_data.csv output`
+      ```
+      python3 MICUM.py {input CSV file name} {output file name}
+      ```
+      Example
+      ```
+      python3 MICUM.py your_data.csv output
+      ```
 
 4. Stopping a container
-   - `sudo docker-compose down`
+   ```
+   sudo docker-compose down
+   ```
      - If you keep running the container, it will consume memory, so it is better to stop it.
      - To reboot, see `4. Building a virtual environment > Each OS > 2. Starting the virtual environment`
 
