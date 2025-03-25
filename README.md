@@ -216,11 +216,12 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
   - `filtered_{output file name}.festa`
 
 The taxonomic status of sequences assigned to an OTU is assigned according to the value of pident (match rate of search sequence in localBLAST search) as follows:
-`pident >= 98.00` : Species name
-`95.00 <= pident < 98.00` : Genus name
-`90.00 <= pident < 95.00` : Family name
-`85.00 <= pident < 90.00` : Order name
-
+```
+pident >= 98.00 : Species name
+95.00 <= pident < 98.00 : Genus name
+90.00 <= pident < 95.00 : Family name
+85.00 <= pident < 90.00 : Order name
+```
 https://github.com/shigebio/MICUM/blob/main/app/MICUM.py#L184-L192
 
 <b>＊CAUTION＊
