@@ -1,5 +1,5 @@
 # MICUM(Moleculer Identification pipeline Computational Unit Manager)
-## これはなに
+## What`s app
 - 系統解析～種の判定を簡易的かつほぼ自動的に行うことを目標に作成したパイプラインツールです
 - 仮想環境の構成にDockerを使用しており、使用者のOSや環境に依存しません
 ### 使用用途
@@ -216,11 +216,12 @@
   - `filtered_{出力ファイル名}.festa`
 
 OTUにつけられる配列ごとの分類学的ステータスは、pident (localBLAST 検索での検索配列の一致率) の値によって下記ルールで割り当てられます:
-`pident >= 98.00` : 種名
-`95.00 <= pident < 98.00` : 属名
-`90.00 <= pident < 95.00` : 科名
-`85.00 <= pident < 90.00` : 目名
-
+```
+pident >= 98.00 : 種名
+95.00 <= pident < 98.00 : 属名
+90.00 <= pident < 95.00 : 科名
+85.00 <= pident < 90.00 : 目名
+```
 https://github.com/shigebio/MICUM/blob/main/app/MICUM.py#L184-L192
 
 <b>＊注意＊
