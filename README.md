@@ -68,19 +68,29 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
   ```
 ---
 ## How to Use MICUM.py
+**Before you run**
+MICUM.py uses NCBI and GBIF APIs. Please refer to the [NCBI](https://blast.ncbi.nlm.nih.gov/doc/blast-help/developerinfo.html#developerinfo) and [GBIF](https://techdocs.gbif.org/en/openapi/v1/species) API guidelines.
+Before running for the first time, as much as possible, please change the example email address in [this code](https://github.com/shigebio/MICUM/blob/main/app/MICUM.py#L21) to your own.
+
+Part of the NCBI guidelines
+>- Do not contact the server more often than once every 10 seconds.
+>- Do not poll for any single RID more often than once a minute.
+>- Use the URL parameter email and tool, so that the NCBI can contact you if there is a problem.
+>- Run scripts weekends or between 9 pm and 5 am Eastern time on weekdays if more than 50 searches will be submitted.
+---
 1. Move the CSV file you prepared in advance to the `input` folder(See [here](#input_section) for how to prepare your CSV file.).
    - Direct specification is also possible
-1. Launch Docker Desktop or Docker Engine
+2. Launch Docker Desktop or Docker Engine
       ```
       # If you use Docker Engine
       service docker start
       ```
 
-1. Starting a virtual environment
+3. Starting a virtual environment
     ```
     docker-compose up -d
     ```
-2. Enter the virtual environment
+4. Enter the virtual environment
     ```
     docker exec -it micum /bin/bash
     ```
@@ -88,7 +98,7 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
     ```
     root@absd1234:/app#
     ```
-3. Executing commands
+5. Executing commands
    1. Basic commands
       ```
       python3 MICUM.py {Input CSV file name} --tree {Options}
@@ -133,7 +143,7 @@ Depending on your environment, you may need to use `sudo` before the `docker` co
       python3 MICUM.py your_data.csv output
       ```
 
-4. Stopping a container
+6. Stopping a container
    ```
    sudo docker-compose down
    ```

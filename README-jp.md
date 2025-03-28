@@ -266,6 +266,16 @@ https://github.com/shigebio/MICUM/blob/main/app/MICUM.py#L184-L192
 
 ---
 ## How to Use merge_data.py
+**実行の前に**
+MICUM.pyはNCBIおよびGBIFのAPIを利用しています。[NCBI](https://blast.ncbi.nlm.nih.gov/doc/blast-help/developerinfo.html#developerinfo)と[GBIF](https://techdocs.gbif.org/en/openapi/v1/species)のAPIガイドラインを参照してください。
+可能な限り、初回実効の前に[こちらのコード](https://github.com/shigebio/MICUM/blob/main/app/MICUM.py#L21)のメールアドレスを自身のものに書き換えてください。
+
+NCBIのガイドラインより一部抜粋
+>- Do not contact the server more often than once every 10 seconds.
+>- Do not poll for any single RID more often than once a minute.
+>- Use the URL parameter email and tool, so that the NCBI can contact you if there is a problem.
+>- Run scripts weekends or between 9 pm and 5 am Eastern time on weekdays if more than 50 searches will be submitted.
+---
 1. MICUM.py を実行したときと同じ方法で Docker コンテナを起動し、仮想環境 (MICUM.py を実行したときと同じ仮想環境) に入る。
    - [MICUM.py の使用方法](https://github.com/shigebio/MICUM?tab=readme-ov-file#how-to-use-micum.py)の手順 2 ～ 4 に従ってください。※MICUM.py を実行するときにこの手順を実行した場合は、この手順を実行する必要はありません。
 2. QiimeとMICUMパイプラインの出力ファイルをinputフォルダに移動する
