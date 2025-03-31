@@ -79,7 +79,7 @@ NCBIのガイドラインより一部抜粋
 >- Use the URL parameter email and tool, so that the NCBI can contact you if there is a problem.
 >- Run scripts weekends or between 9 pm and 5 am Eastern time on weekdays if more than 50 searches will be submitted.
 ---
-1. 事前に用意したCSVファイルを`input`フォルダ下に移動(インプット用CSVの作成方法は[こちら](#input_section)を参照)
+1. 事前に用意したCSVファイルを`input`フォルダ下に移動(インプット用CSVの作成方法は[こちら](https://github.com/shigebio/MICUM/blob/main/README-Preparing_the_input_files.jp.md)を参照)
    - 直接指定可能
 2. 仮想環境の構築
 環境によっては`docker`コマンドの前に`sudo`が必要になります
