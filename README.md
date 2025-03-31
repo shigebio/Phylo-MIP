@@ -78,7 +78,7 @@ Part of the NCBI guidelines
 >- Use the URL parameter email and tool, so that the NCBI can contact you if there is a problem.
 >- Run scripts weekends or between 9 pm and 5 am Eastern time on weekdays if more than 50 searches will be submitted.
 ---
-1. Move the CSV file you prepared in advance to the `input` folder(See [here](#input_section) for how to prepare your CSV file.).
+1. Move the CSV file you prepared in advance to the `input` folder(See [here](https://github.com/shigebio/MICUM/blob/main/README-Preparing_the_input_files.md) for how to prepare your CSV file.).
    - Direct specification is also possible
 2. Launch Docker Desktop or Docker Engine
       ```
