@@ -7,7 +7,7 @@ pytest
 matplotlib
 lxml
 PyQt5
-ete3==3.1.1 # PTPで指定されている
+ete3==3.1.1 # Required by PTP
 pandas
 biopython
 requests
