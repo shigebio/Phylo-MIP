@@ -10,8 +10,8 @@ import datetime
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Insert data from MICUM output file into Qiime output file (TSV or CSV)")
 
-    parser.add_argument("-q", "--file_qiime", required=True, help="Name of the Qiime output file to reference (TSV or CSV)")
-    parser.add_argument("-m", "--file_micum", required=True, help="Name of the MICUM output file to reference (TSV or CSV)")
+    parser.add_argument("-q", "--file_qiime", required=True, help="Path to the Qiime output file (TSV or CSV)")
+    parser.add_argument("-m", "--file_micum", required=True, help="Path to the MICUM output file (TSV or CSV)")
     parser.add_argument("-o", "--output", default="", help="Output filename (default: timestamp prefix)")
     parser.add_argument("-f", "--format", choices=["tsv", "csv"], required=True, help="Output format (tsv or csv)")
 
@@ -83,10 +83,10 @@ def merge_files(qiime_file_path, micum_file_path, output_filename, output_format
     # Read data from MICUM output file
     headers_micum, data_micum = read_file_into_dict(micum_file_path, 'qseqid')
 
-    # Create output directory if it doesn't exist
-    output_dir = "../output"
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    # Get the directory of the qiime file for output
+    output_dir = os.path.dirname(qiime_file_path)
+    if not output_dir:  # If dirname returns empty string (for relative paths)
+        output_dir = os.getcwd()
 
     # Generate filename with timestamp if not provided
     if not output_filename:
@@ -131,15 +131,9 @@ def merge_files(qiime_file_path, micum_file_path, output_filename, output_format
 def main():
     args = parse_arguments()
 
-    # Set input directory
-    input_dir = "../input"
-
-    # Construct full file paths for input files
-    qiime_file = args.file_qiime
-    micum_file = args.file_micum
-
-    qiime_file_path = os.path.join(input_dir, qiime_file)
-    micum_file_path = os.path.join(input_dir, micum_file)
+    # Use the input file paths directly
+    qiime_file_path = args.file_qiime
+    micum_file_path = args.file_micum
 
     # Print for debugging
     print(f"Looking for Qiime file at: {qiime_file_path}")

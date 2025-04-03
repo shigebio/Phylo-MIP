@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# Check if we have arguments
+if [ $# -eq 0 ]; then
+    echo "Error: No arguments provided"
+    echo "Usage: merge_data [options]"
+    echo "Options should include -q and -m for input files"
+    exit 1
+fi
+
+# For directly passing all arguments to the Docker container
+INPUT_DIR=$(pwd)
+
+# Check if Docker is installed
+if ! command -v docker &>/dev/null; then
+    echo "Docker is not installed or not available in the PATH."
+    exit 1
+fi
+
+# Determine if sudo is needed for Docker
+SUDO_CMD=""
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    if ! groups $(whoami) | grep -q "\bdocker\b"; then
+        SUDO_CMD="sudo"
+    fi
+else
+    SUDO_CMD=""  # Default for non-Linux systems
+fi
+
+# Check if Docker image exists
+IMAGE=$($SUDO_CMD docker images --format "{{.Repository}}" | grep -E "^shigebio/micum$|^micum$" | head -n 1)
+if [ -z "$IMAGE" ]; then
+    IMAGE="micum"
+    echo "Using image: $IMAGE"
+fi
+
+# Run Docker container with the current directory mounted
+echo "Running merge_data with arguments: $@"
+$SUDO_CMD docker run --rm -it \
+    -v "$INPUT_DIR:/workdir" \
+    -w /workdir \
+    "$IMAGE" \
+    merge_data "$@"

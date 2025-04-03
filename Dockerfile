@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM --platform=linux/amd64 ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -50,7 +50,6 @@ RUN apt-get update && apt-get install -y \
     apt-get clean
 
 # Installing Python 3.7
-# Due to the version of ubuntu, I can't get it with apt-get so I'm using wget
 RUN wget https://www.python.org/ftp/python/3.7.15/Python-3.7.15.tgz && \
     tar -xzf Python-3.7.15.tgz && \
     cd Python-3.7.15 && \
@@ -92,9 +91,13 @@ RUN git clone https://github.com/Pas-Kapli/mptp.git /app/mptp && \
     make && \
     make install
 
-RUN mkdir -p /input
-RUN mkdir -p /output
-
+# Copy application files
 COPY ./app /app
 
+# Set up entrypoint script
+COPY ./entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 WORKDIR /app
+
+ENTRYPOINT ["/entrypoint.sh"]
