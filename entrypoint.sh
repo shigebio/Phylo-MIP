@@ -1,46 +1,37 @@
 #!/bin/bash
 
-# This script directly executes the appropriate Python script based on the first argument
-# No command name detection needed inside the container
+# Simple entrypoint that selects the appropriate Python script based on the first argument
 
 # Debug information
-echo "Running in container with arguments: $@"
+echo "Running in container"
 echo "Working directory: $(pwd)"
+echo "Arguments: $@"
 
-# First argument should indicate which script to run
-if [ "$1" = "micum" ]; then
-    # Shift to remove the command name
-    shift
-
-    # Next argument is the input file path
-    INPUT_FILE="$1"
-    shift  # Remove the input file from arguments
-
-    if [ -z "$INPUT_FILE" ]; then
-        echo "Error: Input file not provided"
-        echo "Usage: micum <input_file> [options]"
-        exit 1
-    fi
-
-    if [ ! -f "$INPUT_FILE" ]; then
-        echo "Error: Input file '$INPUT_FILE' not found"
-        exit 1
-    fi
-
-    echo "Running MICUM.py with input file: $INPUT_FILE"
-    cd /app
-    python3 /app/MICUM.py "$INPUT_FILE" "$@"
-
-elif [ "$1" = "merge_data" ]; then
-    # Shift to remove the command name
-    shift
-
-    echo "Running merge_data.py with arguments: $@"
-    cd /app
-    python3 /app/merge_data.py "$@"
-
+# First argument determines the command to run
+if [[ "$1" == *"MICUM.py"* ]]; then
+    # Running the MICUM.py script
+    echo "Executing MICUM.py with arguments: $@"
+    python3 "$@"
+elif [[ "$1" == *"merge_data.py"* ]]; then
+    # Running the merge_data.py script
+    echo "Executing merge_data.py with arguments: $@"
+    python3 "$@"
 else
-    echo "Unknown command: $1"
-    echo "Supported commands: micum, merge_data"
-    exit 1
+    # Determine if we're being run with a direct command name
+    if [ "$1" = "micum" ]; then
+        shift
+        INPUT_FILE="$1"
+        shift
+        echo "Executing MICUM.py with input file: $INPUT_FILE and options: $@"
+        python3 /app/MICUM.py "$INPUT_FILE" "$@"
+    elif [ "$1" = "merge_data" ]; then
+        shift
+        echo "Executing merge_data.py with options: $@"
+        python3 /app/merge_data.py "$@"
+    else
+        echo "Unknown command or script: $1"
+        echo "Available commands: micum, merge_data"
+        echo "Or specify full path to script: /app/MICUM.py, /app/merge_data.py"
+        exit 1
+    fi
 fi

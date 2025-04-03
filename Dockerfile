@@ -94,9 +94,17 @@ RUN git clone https://github.com/Pas-Kapli/mptp.git /app/mptp && \
 # Copy application files
 COPY ./app /app
 
-# Set up entrypoint script
+# Create entrypoint script
 COPY ./entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+# Make scripts executable in container
+RUN echo '#!/bin/bash\npython3 /app/MICUM.py "$@"' > /usr/local/bin/micum && \
+    echo '#!/bin/bash\npython3 /app/merge_data.py "$@"' > /usr/local/bin/merge_data && \
+    chmod +x /usr/local/bin/micum && \
+    chmod +x /usr/local/bin/merge_data
+
+ENV PATH="/usr/local/bin:${PATH}"
 
 WORKDIR /app
 

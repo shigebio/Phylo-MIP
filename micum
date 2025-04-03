@@ -1,22 +1,15 @@
 #!/bin/bash
 
-# Check if we have at least one argument (input file)
+# Check if we have arguments
 if [ $# -eq 0 ]; then
-    echo "Error: No input file provided"
-    echo "Usage: micum <input_file> [options]"
+    echo "Usage: $0 <input_file> [options]"
     exit 1
 fi
 
 # Get absolute path of the input file
-INPUT_FILE=$(realpath "$1")
+INPUT_FILE=$(cd "$(dirname "$1")" && pwd)/$(basename "$1")
 INPUT_DIR=$(dirname "$INPUT_FILE")
 FILENAME=$(basename "$INPUT_FILE")
-
-# Check if Docker is installed
-if ! command -v docker &>/dev/null; then
-    echo "Docker is not installed or not available in the PATH."
-    exit 1
-fi
 
 # Check if input file exists
 if [ ! -f "$INPUT_FILE" ]; then
@@ -24,28 +17,45 @@ if [ ! -f "$INPUT_FILE" ]; then
     exit 1
 fi
 
-# Determine if sudo is needed for Docker
-SUDO_CMD=""
-if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    if ! groups $(whoami) | grep -q "\bdocker\b"; then
-        SUDO_CMD="sudo"
-    fi
+# Check if Docker is installed
+if ! command -v docker &>/dev/null; then
+    echo "Error: Docker is not installed or not available in the PATH."
+    exit 1
 fi
 
 # Remove first argument (input file) from args list
 shift
 
-# Check if Docker image exists
-IMAGE=$($SUDO_CMD docker images --format "{{.Repository}}" | grep -E "^shigebio/micum$|^micum$" | head -n 1)
+# Check for Docker image
+IMAGE=$(docker images --format "{{.Repository}}" | grep -E "^shigebio/micum$|^micum$" | head -n 1)
 if [ -z "$IMAGE" ]; then
     IMAGE="micum"
-    echo "Using image: $IMAGE"
+    echo "Using default image name: $IMAGE"
+    # Check if image exists
+    if ! docker images | grep -q "$IMAGE"; then
+        echo "Error: Docker image '$IMAGE' not found."
+        echo "Please build the image first with: docker build -t micum ."
+        exit 1
+    fi
 fi
 
-# Run Docker container with the current directory mounted
-echo "Running MICUM with input file: $FILENAME"
-$SUDO_CMD docker run --rm -it \
+echo "-------------------------------------------"
+echo "Running MICUM with:"
+echo "Input file: $FILENAME"
+echo "Input directory: $INPUT_DIR"
+echo "Docker image: $IMAGE"
+echo "Additional options: $@"
+echo "-------------------------------------------"
+
+# Run Docker container directly with the appropriate command
+docker run --rm -it \
     -v "$INPUT_DIR:/workdir" \
     -w /workdir \
     "$IMAGE" \
-    micum "/workdir/$FILENAME" "$@"
+    python3 /app/MICUM.py "/workdir/$FILENAME" "$@"
+
+exit_code=$?
+if [ $exit_code -ne 0 ]; then
+    echo "Error: MICUM execution failed with exit code $exit_code"
+    exit $exit_code
+fi
