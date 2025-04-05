@@ -1,0 +1,84 @@
+#!/bin/bash
+
+# Check if we have arguments
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 <input_file> [options]"
+    exit 1
+fi
+
+# Get absolute path of the input file (cross-platform compatible way)
+if [ "$(uname)" == "Darwin" ]; then
+    # macOS approach without using realpath command
+    INPUT_FILE=$(cd "$(dirname "$1")" && pwd)/$(basename "$1")
+else
+    # Linux approach
+    INPUT_FILE=$(realpath "$1")
+fi
+
+INPUT_DIR=$(dirname "$INPUT_FILE")
+FILENAME=$(basename "$INPUT_FILE")
+
+# Check if input file exists
+if [ ! -f "$INPUT_FILE" ]; then
+    echo "Error: Input file '$INPUT_FILE' not found"
+    exit 1
+fi
+
+# Remove first argument (input file) from args list
+shift
+
+# Create a temporary directory
+TEMP_DIR=$(mktemp -d)
+echo "Creating temporary directory: $TEMP_DIR"
+
+# Copy input file to temp directory
+cp "$INPUT_FILE" "$TEMP_DIR/input_file"
+
+# Platform detection
+if [ "$(uname)" == "Darwin" ]; then
+    # macOS needs platform specification
+    PLATFORM_FLAG="--platform linux/amd64"
+else
+    # Linux doesn't need platform specification
+    PLATFORM_FLAG=""
+fi
+
+echo "Running Docker with file from temporary directory"
+
+# Run Docker container with the appropriate command and platform settings
+# Adding user mapping to ensure files are created with current user permissions
+docker run --rm -it ${PLATFORM_FLAG} \
+    -v "$TEMP_DIR:/workdir" \
+    -v "$INPUT_DIR:/output" \
+    -w /workdir \
+    --user $(id -u):$(id -g) \
+    micum \
+    python3 /app/MICUM.py "/workdir/input_file" "$@"
+
+# Check the Docker exit status
+DOCKER_STATUS=$?
+if [ $DOCKER_STATUS -ne 0 ]; then
+    echo "Error: Docker command failed with status $DOCKER_STATUS"
+fi
+
+# Copy all output files from temp dir to original directory
+echo "Copying output files back to original directory"
+find "$TEMP_DIR" -type f -not -name "input_file" | while read file; do
+    # Use sudo to copy if normal copy fails
+    if ! cp "$file" "$INPUT_DIR/" 2>/dev/null; then
+        echo "Using sudo to copy: $(basename "$file")"
+        sudo cp "$file" "$INPUT_DIR/"
+        sudo chown $(id -u):$(id -g) "$INPUT_DIR/$(basename "$file")"
+    else
+        echo "Copied: $(basename "$file")"
+    fi
+done
+
+# Clean up temporary directory with sudo if needed
+echo "Cleaning up temporary directory"
+if ! rm -rf "$TEMP_DIR" 2>/dev/null; then
+    echo "Using sudo to remove temporary directory"
+    sudo rm -rf "$TEMP_DIR"
+fi
+
+echo "Process complete. Output files saved to: $INPUT_DIR"

@@ -1,0 +1,151 @@
+#!/bin/bash
+
+# Check if we have arguments
+if [ $# -lt 6 ]; then
+    echo "Error: Insufficient arguments provided"
+    echo "Usage: $0 -q <qiime_file> -m <micum_file> -f <format> [-o <output_file>] [-d]"
+    exit 1
+fi
+
+# Parse arguments to find file paths
+QIIME_FILE=""
+MICUM_FILE=""
+FORMAT=""
+OUTPUT_FILE=""
+DEBUG=""
+OTHER_ARGS=""
+
+# Simple argument parser
+index=1
+while [ $index -le $# ]; do
+    current_arg=${!index}
+
+    if [ "$current_arg" = "-q" ]; then
+        next_index=$((index + 1))
+        QIIME_FILE=${!next_index}
+        index=$((index + 2))
+    elif [ "$current_arg" = "-m" ]; then
+        next_index=$((index + 1))
+        MICUM_FILE=${!next_index}
+        index=$((index + 2))
+    elif [ "$current_arg" = "-f" ]; then
+        next_index=$((index + 1))
+        FORMAT=${!next_index}
+        index=$((index + 2))
+    elif [ "$current_arg" = "-o" ]; then
+        next_index=$((index + 1))
+        OUTPUT_FILE=${!next_index}
+        index=$((index + 2))
+    elif [ "$current_arg" = "-d" ]; then
+        DEBUG="-d"
+        index=$((index + 1))
+    else
+        OTHER_ARGS="$OTHER_ARGS $current_arg"
+        index=$((index + 1))
+    fi
+done
+
+# Check if required files were specified
+if [ -z "$QIIME_FILE" ] || [ -z "$MICUM_FILE" ] || [ -z "$FORMAT" ]; then
+    echo "Error: QIIME file (-q), MICUM file (-m), and format (-f) must be specified"
+    exit 1
+fi
+
+# Get absolute paths of input files (cross-platform compatible way)
+if [ "$(uname)" == "Darwin" ]; then
+    # macOS approach - don't use realpath -s which is not available on BSD
+    QIIME_FILE=$(cd "$(dirname "$QIIME_FILE")" && pwd)/$(basename "$QIIME_FILE")
+    MICUM_FILE=$(cd "$(dirname "$MICUM_FILE")" && pwd)/$(basename "$MICUM_FILE")
+else
+    # Linux approach
+    QIIME_FILE=$(realpath "$QIIME_FILE")
+    MICUM_FILE=$(realpath "$MICUM_FILE")
+fi
+
+# Check if files exist
+if [ ! -f "$QIIME_FILE" ]; then
+    echo "Error: QIIME file not found: $QIIME_FILE"
+    exit 1
+fi
+
+if [ ! -f "$MICUM_FILE" ]; then
+    echo "Error: MICUM file not found: $MICUM_FILE"
+    exit 1
+fi
+
+# Get current directory and file names
+CURRENT_DIR=$(pwd)
+QIIME_BASENAME=$(basename "$QIIME_FILE")
+MICUM_BASENAME=$(basename "$MICUM_FILE")
+
+# Create a temporary directory
+TEMP_DIR=$(mktemp -d)
+echo "Creating temporary directory: $TEMP_DIR"
+
+# Copy files to temp directory
+cp "$QIIME_FILE" "$TEMP_DIR/qiime_file"
+cp "$MICUM_FILE" "$TEMP_DIR/micum_file"
+
+# Platform detection
+if [ "$(uname)" == "Darwin" ]; then
+    # macOS needs platform specification
+    PLATFORM_FLAG="--platform linux/amd64"
+else
+    # Linux doesn't need platform specification
+    PLATFORM_FLAG=""
+fi
+
+# Determine output filename if provided
+OUTPUT_ARGS=""
+if [ -n "$OUTPUT_FILE" ]; then
+    OUTPUT_BASENAME=$(basename "$OUTPUT_FILE")
+    OUTPUT_ARGS="-o $OUTPUT_BASENAME"
+fi
+
+echo "Running Docker with files from temporary directory"
+
+# Run Docker container with the appropriate command
+docker run --rm -it ${PLATFORM_FLAG} \
+    -v "$TEMP_DIR:/workdir" \
+    -w /workdir \
+    micum \
+    python3 /app/merge_data.py -q "/workdir/qiime_file" -m "/workdir/micum_file" -f "$FORMAT" $OUTPUT_ARGS $DEBUG $OTHER_ARGS
+
+# Check the Docker exit status
+DOCKER_STATUS=$?
+if [ $DOCKER_STATUS -ne 0 ]; then
+    echo "Error: Docker command failed with status $DOCKER_STATUS"
+    echo "Cleaning up temporary directory"
+    rm -rf "$TEMP_DIR"
+    exit $DOCKER_STATUS
+fi
+
+# Determine the output file name pattern
+if [ -n "$OUTPUT_FILE" ]; then
+    # If output file was specified, look for this file
+    OUTPUT_PATTERN="$OUTPUT_BASENAME"
+else
+    # If no output file was specified, look for timestamp-based files
+    OUTPUT_PATTERN="*_merged.*"
+fi
+
+# Copy all possible output files from temp dir to current directory
+echo "Copying output files back to current directory"
+find "$TEMP_DIR" -name "$OUTPUT_PATTERN" -o -name "*.csv" -o -name "*.tsv" | while read file; do
+    cp "$file" "$CURRENT_DIR/"
+    echo "Copied: $(basename "$file")"
+done
+
+# Count how many files were copied
+OUTPUT_COUNT=$(find "$TEMP_DIR" -name "$OUTPUT_PATTERN" -o -name "*.csv" -o -name "*.tsv" | wc -l)
+
+# Clean up temporary directory
+echo "Cleaning up temporary directory"
+rm -rf "$TEMP_DIR"
+
+# Final confirmation
+if [ "$OUTPUT_COUNT" -gt 0 ]; then
+    echo "Process complete. Output files saved to current directory."
+else
+    echo "WARNING: No output files were found! Check for errors in the processing."
+fi

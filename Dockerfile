@@ -1,6 +1,7 @@
 FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONPATH="/usr/local/lib/python3.7/site-packages"
 
 # Install required packages
 RUN apt-get update && apt-get install -y \
@@ -50,7 +51,6 @@ RUN apt-get update && apt-get install -y \
     apt-get clean
 
 # Installing Python 3.7
-# Due to the version of ubuntu, I can't get it with apt-get so I'm using wget
 RUN wget https://www.python.org/ftp/python/3.7.15/Python-3.7.15.tgz && \
     tar -xzf Python-3.7.15.tgz && \
     cd Python-3.7.15 && \
@@ -92,9 +92,22 @@ RUN git clone https://github.com/Pas-Kapli/mptp.git /app/mptp && \
     make && \
     make install
 
-RUN mkdir -p /input
-RUN mkdir -p /output
-
+# Copy application files
 COPY ./app /app
 
+# Copy entrypoint script
+COPY ./entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Make scripts executable in container
+RUN echo '#!/bin/bash\npython3 /app/MICUM.py "$@"' > /usr/local/bin/micum && \
+    echo '#!/bin/bash\npython3 /app/merge_data.py "$@"' > /usr/local/bin/merge_data && \
+    chmod +x /usr/local/bin/micum && \
+    chmod +x /usr/local/bin/merge_data
+
+ENV PATH="/usr/local/bin:${PATH}"
+
 WORKDIR /app
+
+# Ensure we always execute Python scripts with python3
+ENTRYPOINT ["/entrypoint.sh"]

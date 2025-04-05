@@ -1,3 +1,5 @@
+import os
+from datetime import datetime
 import pandas as pd
 from Bio import Entrez, Phylo
 import requests
@@ -9,13 +11,12 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import argparse
 import re
-import os
 import six
 import csv
 import glob
 from datetime import datetime
-sys.path.append('/usr/local/lib/python3.7/site-packages')
 from ete3 import NodeStyle
+sys.path.append('/usr/local/lib/python3.7/site-packages')
 
 # If you want to receive notifications from NCBI, change it to your own email address
 Entrez.email = "your_email@example.com"
@@ -23,7 +24,7 @@ default_seed = random.randint(1, 10**6)
 
 # Parsing optional arguments
 parser = argparse.ArgumentParser(description="Process Sequence file and generate phylogenetic trees")
-parser.add_argument('input_csv', help="Input CSV file (relative path to ../input)")
+parser.add_argument('input_csv', help="Input CSV file path")
 parser.add_argument('--o',  type=str, dest="output_base", help="Output base name")
 parser.add_argument('--top', type=int, default=1, choices=range(1, 10), help="Number of top results to retain per qseqid (default: 1, range: 1-10)")
 parser.add_argument('--onlyp', action='store_true', help="Run only phylogenic analysis")
@@ -42,22 +43,22 @@ bptp_group.add_argument('--burnin', type=float, default=0.1, help='Burn-in fract
 bptp_group.add_argument('--seed', type=int, default=default_seed, help='Random seed (default: {default_seed})')
 
 args = parser.parse_args()
+input_file_path = os.path.abspath(args.input_csv)
+input_dir = os.path.dirname(input_file_path)
+timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+output_dir = os.path.join(input_dir, f"micum_output_{timestamp}")
+os.makedirs(output_dir, exist_ok=True)
 
 # For filename sanitization
 invalid_chars = r'[<>:"/\\|?*]'
 
 # Import CSV
-input_filename = args.input_csv
-input_path = os.path.join('..', 'input', input_filename)
-if not os.path.exists(input_path):
-    print(f"File not found in 'input' directory. Checking the provided path: {input_filename}")
-    input_path = input_filename
-
 try:
-        df = pd.read_csv(input_path)
-        print(f"File loaded successfully from {input_path}")
+    df = pd.read_csv(input_file_path)
+    print(f"File loaded successfully from: {input_file_path}")
 except Exception as e:
-        print(f"Error reading CSV file: {e}")
+    print(f"Error reading CSV file: {e}")
+    sys.exit(1)
 
 # If there are duplicate qseqids, only the number selected from the one with the highest pindent is left
 df = df.sort_values('pident', ascending=False).groupby('qseqid').head(args.top)
@@ -198,12 +199,10 @@ def process_row(index, row):
         fasta_entry = f">{sanitize_otu_name(f'{qseqid}_{accessionID}_{taxonomic_name}_{pident:.2f}')}\n{qseq}\n"
         csv_entry = [qseqid, accessionID, class_name, order, taxonomic_name, pident, qseq, source]
 
-        print(f"Processing row {index + 1} of {len(df)}")
-
         return fasta_entry, csv_entry
 
     except Exception as e:
-        print(f"Error processing row {index + 1}: {e}")
+        print(f"Error in qseqid {qseqid}: {e}")
         # Use "Uncertain_taxonomy" on error
         taxonomic_name = "Uncertain_taxonomy"
         fasta_entry = f">{sanitize_otu_name(f'{qseqid}_{accessionID}_{taxonomic_name}_{pident:.2f}')}\n{qseq}\n"
@@ -249,14 +248,14 @@ def process_with_progress(filter_class=None):
 
     print()  # End progress tracking
 
-    output_fasta = save_fasta('../output/pre_filtered_output.fasta', fasta_list)
-    save_csv('../output/pre_filtered_output.csv', csv_data)
+    output_fasta = save_fasta(os.path.join(output_dir, 'pre_filtered_output.fasta'), fasta_list)
+    save_csv(os.path.join(output_dir, 'pre_filtered_output.csv'), csv_data)
 
     print("Processing complete.")
 
     if filter_class:
-        output_fasta = save_fasta('../output/filtered_output.fasta', filtered_fasta_list)
-        save_csv('../output/filtered_output.csv', filtered_csv_data)
+        output_fasta = save_fasta(os.path.join(output_dir, 'filtered_output.fasta'), filtered_fasta_list)
+        save_csv(os.path.join(output_dir, 'filtered_output.csv'), filtered_csv_data)
 
     return output_fasta
 
@@ -297,9 +296,8 @@ def csv_to_fasta(input_csv, output_fasta): # IMO: It may be more streamlined to 
     return output_fasta
 
 # VSEARCH
-def run_vsearch(input_fasta, output_centroids):
+def run_vsearch(input_fasta, output_centroids, output_dir):
     # Specify the output directory
-    output_dir = "../output/"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
@@ -319,7 +317,7 @@ def run_vsearch(input_fasta, output_centroids):
 
 # MAFFT
 def run_mafft(vsearch_output, output_aligned):
-    mafft_cmd = f"mafft --auto {vsearch_output} > ../output/{output_aligned}"
+    mafft_cmd = f"mafft --auto {vsearch_output} > {os.path.join(output_dir, output_aligned)}"
     print(f"Running MAFFT: {mafft_cmd}")
     subprocess.run(mafft_cmd, shell=True, check=True)
 
@@ -343,24 +341,24 @@ def run_fasttree(input_aligned, output_tree, method="NJ", bootstrap=1000, gamma=
     if outgroup:
         fasttree_cmd += f" -outgroup {outgroup}"
 
-    fasttree_cmd += f" {input_aligned} > ../output/{output_tree}"
+    fasttree_cmd += f" {input_aligned} > {os.path.join(output_dir, output_tree)}"
     print(f"Running FastTree: {fasttree_cmd}")
     subprocess.run(fasttree_cmd, shell=True, check=True)
     print(f"Phylogenetic tree saved to {output_tree}")
 
 # bPTP
-def run_bptp(tree_file, mcmc, thinning, burnin, seed):
+def run_bptp(tree_file, mcmc, thinning, burnin, seed, output_dir):
     try:
         # Build path for bPTP.py
         bptp_path = os.path.join('/app/PTP/bin', 'bPTP.py')
 
         # Creating the output directory
         now = datetime.now().strftime('%Y%m%d_%H%M%S')  # Get date, minute and second
-        output_dir = os.path.join('../output', f'bPTP_{now}')
-        os.makedirs(output_dir, exist_ok=True)  # Create directory (skip if exists)
+        bptp_output_dir = os.path.join(output_dir, f'bPTP_{now}')
+        os.makedirs(bptp_output_dir, exist_ok=True)  # Create directory (skip if exists)
 
         # Set the output file name
-        output_file = os.path.join(output_dir, 'output_base_tree_bptp_output.txt')
+        output_file = os.path.join(bptp_output_dir, 'output_base_tree_bptp_output.txt')
 
         # Build a command to run bPTP.py
         bptp_command = [
@@ -380,15 +378,15 @@ def run_bptp(tree_file, mcmc, thinning, burnin, seed):
     except subprocess.CalledProcessError as e:
         print(f"Error running bPTP.py: {e}")
 
-def run_mptp(tree_file):
+def run_mptp(tree_file, output_dir):
     try:
         # Creating the output directory
         now = datetime.now().strftime('%Y%m%d_%H%M%S')  # Get date, minute and second
-        output_dir = os.path.join('../output', f'mPTP_{now}')
-        os.makedirs(output_dir, exist_ok=True)  # Create directory (skip if exists)
+        mptp_output_dir = os.path.join(output_dir, f'mPTP_{now}')
+        os.makedirs(mptp_output_dir, exist_ok=True)  # Create directory (skip if exists)
 
         # Set the output file name
-        output_file = os.path.join(output_dir, 'output_base_tree_mptp_output.txt')  # Output file path
+        output_file = os.path.join(mptp_output_dir, 'output_base_tree_mptp_output.txt')  # Output file path
 
         # Run mPTP
         subprocess.run(
@@ -528,9 +526,6 @@ def process_ptp_outputs():
     """
     print("Processing PTP output files...")
 
-    # Set output directory
-    output_dir = '../output'
-
     # Find all bPTP output directories
     bptp_dirs = glob.glob(os.path.join(output_dir, 'bPTP_*'))
 
@@ -595,13 +590,13 @@ sanitized_input_name = re.sub(invalid_chars, '_', f"{args.input_csv}")
 output_base = args.output_base if args.output_base else f"{sanitized_input_name}_output"
 
 if args.onlyp: # Branch to execute only phylogenetic analysis and later
-    input_csv = os.path.join(input_path)
-    filtered_filename = os.path.join('..', 'output', f"{output_base}_filtered.csv")  # Saved under ../output
+    input_csv = os.path.join(input_file_path)
+    filtered_filename = os.path.join(output_dir, f"{output_base}_filtered.csv")  # Saved under ../output
 
     if args.class_name:  # If --class option is specified, filter by the specified class.
         filter_by_class(input_csv, filtered_filename, args.class_name)
 
-    fasta_filename = os.path.join('..', 'output', f"{output_base}.fasta")
+    fasta_filename = os.path.join(output_dir, f"{output_base}.fasta")
     output_fasta = csv_to_fasta(input_csv, fasta_filename)
 
 else:
@@ -610,26 +605,26 @@ else:
 
 # When the --tree option is present: Create a phylogenetic tree using VSEARCH→MAFFT→FastTree
 if args.tree:
-    vsearch_output = os.path.join("../output/", "output_vsearch.fasta")
-    aligned_fasta = f"{output_base}_aligned.fasta"
-    tree_file = f"{output_base}_tree.nwk"
+    vsearch_output = os.path.join(output_dir, "output_vsearch.fasta")
+    aligned_fasta = os.path.join(output_dir, f"{output_base}_aligned.fasta")
+    tree_file = os.path.join(output_dir, f"{output_base}_tree.nwk")
 
     # Run VSEARCH to cluster sequences
-    run_vsearch(output_fasta, vsearch_output)
+    run_vsearch(output_fasta, vsearch_output, output_dir)
 
     # Run MAFFT on the VSEARCH output
     run_mafft(vsearch_output, aligned_fasta)
 
     # Run FastTree
-    mafft_output = os.path.join("../output/", aligned_fasta)
+    mafft_output = os.path.join(output_dir, aligned_fasta)
     run_fasttree(mafft_output, tree_file, method=args.method, bootstrap=args.bootstrap, gamma=args.gamma, outgroup=args.outgroup)
 
     # Exporting NEXUS files
-    nwk = Phylo.read(f"../output/{tree_file}", 'newick')
-    Phylo.write(nwk, f"../output/{output_base}_tree.nex", 'nexus')
+    nwk = Phylo.read(os.path.join(output_dir, tree_file), 'newick')
+    Phylo.write(nwk, os.path.join(output_dir, f"{output_base}_tree.nex"), 'nexus')
     print("Newick file from FastTree has been converted to NEXUS format.")
 
-    nexus_output = os.path.join("../output/", tree_file)
+    nexus_output = os.path.join(output_dir, tree_file)
 
     # Run bPTP
     mcmc = args.mcmc
@@ -638,10 +633,10 @@ if args.tree:
     seed = args.seed
 
     print(f"MCMC: {mcmc}, Thinning: {thinning}, Burn-in: {burnin}, Seed: {seed}")
-    run_bptp(nexus_output, mcmc, thinning, burnin, seed)
+    run_bptp(nexus_output, mcmc, thinning, burnin, seed, output_dir)
 
     # Run mPTP
-    run_mptp(nexus_output)
+    run_mptp(nexus_output, output_dir)
 
     # Process PTP outputs and update CSV files
     process_ptp_outputs()
