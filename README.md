@@ -60,43 +60,43 @@ Part of the NCBI guidelines
       service docker start
       ```
 1. Executing commands
-   **Basic commands**
-    ```
-    micum {Path to Input CSV} --tree {Options}
-    ```
+
+    **Basic commands**
+      ```
+      micum {Path to Input CSV} --tree {Options}
+      ```
     **Example**
-    ```
-    micum ./path/to/your_input.csv --tree --method ML --bootstrap 250
-    ```
+      ```
+      micum ./path/to/your_input.csv --tree --method ML --bootstrap 250
+      ```
 
-    See [here](https://github.com/shigebio/MICUM/blob/main/README-Preparing_the_input_files.md) for acceptable input file formats
-
+   See [here](https://github.com/shigebio/MICUM/blob/main/README-Preparing_the_input_files.md) for acceptable input file formats
+  
       <details><summary>See Options</summary>
-
-      - `--top` : You can specify 1 to 10 of the top `pident` with the same `qseqid`.
-        - Default: `1`
-      - `--o` : Output name of the output file. If not present, the default name is applied.
-      - `--class` : Analysis can be limited to specific taxa (currently only classes).
-        - Please note that if taxonomic group information obtained from NCBI or GBIF is not entered, it will not be searchable.
-        - You can also manually create a `class` column and enter any value.
-      - `--tree`
-          ```
-          ## Sub options
-          # --method : You can select the method for constructing a phylogenetic tree. Only `ML` can be used, which will use the ML method.
-          # --bootstrap : Number of bootstrap iterations. Default: `250`
-          # --gamma : Whether to apply gamma distribution. Default: `False`
-          # --outgroup {OTU name} : Specify the outgroup
-      - `--onlyp`： Perform phylogenetic analysis and beyond (alignment → removal of identical haplotypes → creation of phylogenetic tree → species determination analysis)
-          - https://github.com/shigebio/MICUM/pull/7
-        - `--bptp` : bPTP Analysis Options
-          ```
-          ## Sub options
-          # --mcmc : You can set the number of MCMC iterations.
-          # --thinning : You can set the number of samplings. Sampling is performed for each MCMC chain every specified number. Default: `100`
-          # --burnin : Burn-in ratio (0.1~1.0). Default: `0.1`
-          # --seed : The seed you want to assign. The same seed value will give you the same results every time for the same input. The default is a random seed.
+      
+        - `--top` : You can specify 1 to 10 of the top `pident` with the same `qseqid`.
+          - Default: `1`
+        - `--o` : Output name of the output file. If not present, the default name is applied.
+        - `--class` : Analysis can be limited to specific taxa (currently only classes).
+          - Please note that if taxonomic group information obtained from NCBI or GBIF is not entered, it will not be searchable.
+          - You can also manually create a `class` column and enter any value.
+        - `--tree`
+            ```
+            ## Sub options
+            # --method : You can select the method for constructing a phylogenetic tree. Only `ML` can be used, which will use the ML method.
+            # --bootstrap : Number of bootstrap iterations. Default: `250`
+            # --gamma : Whether to apply gamma distribution. Default: `False`
+            # --outgroup {OTU name} : Specify the outgroup
+        - `--onlyp`： Perform phylogenetic analysis and beyond (alignment → removal of identical haplotypes → creation of phylogenetic tree → species determination analysis)
+            - https://github.com/shigebio/MICUM/pull/7
+          - `--bptp` : bPTP Analysis Options
+            ```
+            ## Sub options
+            # --mcmc : You can set the number of MCMC iterations.
+            # --thinning : You can set the number of samplings. Sampling is performed for each MCMC chain every specified number. Default: `100`
+            # --burnin : Burn-in ratio (0.1~1.0). Default: `0.1`
+            # --seed : The seed you want to assign. The same seed value will give you the same results every time for the same input. The default is a random seed.
       </details>
-        <br>
 
    **If you only want to output FASTA and CSV files**
       ```
