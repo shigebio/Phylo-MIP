@@ -6,8 +6,15 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-# Get absolute path of the input file
-INPUT_FILE=$(cd "$(dirname "$1")" && pwd)/$(basename "$1")
+# Get absolute path of the input file (cross-platform compatible way)
+if [ "$(uname)" == "Darwin" ]; then
+    # macOS approach without using realpath command
+    INPUT_FILE=$(cd "$(dirname "$1")" && pwd)/$(basename "$1")
+else
+    # Linux approach
+    INPUT_FILE=$(realpath "$1")
+fi
+
 INPUT_DIR=$(dirname "$INPUT_FILE")
 FILENAME=$(basename "$INPUT_FILE")
 
@@ -17,45 +24,61 @@ if [ ! -f "$INPUT_FILE" ]; then
     exit 1
 fi
 
-# Check if Docker is installed
-if ! command -v docker &>/dev/null; then
-    echo "Error: Docker is not installed or not available in the PATH."
-    exit 1
-fi
-
 # Remove first argument (input file) from args list
 shift
 
-# Check for Docker image
-IMAGE=$(docker images --format "{{.Repository}}" | grep -E "^shigebio/micum$|^micum$" | head -n 1)
-if [ -z "$IMAGE" ]; then
-    IMAGE="micum"
-    echo "Using default image name: $IMAGE"
-    # Check if image exists
-    if ! docker images | grep -q "$IMAGE"; then
-        echo "Error: Docker image '$IMAGE' not found."
-        echo "Please build the image first with: docker build -t micum ."
-        exit 1
-    fi
+# Create a temporary directory
+TEMP_DIR=$(mktemp -d)
+echo "Creating temporary directory: $TEMP_DIR"
+
+# Copy input file to temp directory
+cp "$INPUT_FILE" "$TEMP_DIR/input_file"
+
+# Platform detection
+if [ "$(uname)" == "Darwin" ]; then
+    # macOS needs platform specification
+    PLATFORM_FLAG="--platform linux/amd64"
+else
+    # Linux doesn't need platform specification
+    PLATFORM_FLAG=""
 fi
 
-echo "-------------------------------------------"
-echo "Running MICUM with:"
-echo "Input file: $FILENAME"
-echo "Input directory: $INPUT_DIR"
-echo "Docker image: $IMAGE"
-echo "Additional options: $@"
-echo "-------------------------------------------"
+echo "Running Docker with file from temporary directory"
 
-# Run Docker container directly with the appropriate command
-docker run --rm -it \
-    -v "$INPUT_DIR:/workdir" \
+# Run Docker container with the appropriate command and platform settings
+# Adding user mapping to ensure files are created with current user permissions
+docker run --rm -it ${PLATFORM_FLAG} \
+    -v "$TEMP_DIR:/workdir" \
+    -v "$INPUT_DIR:/output" \
     -w /workdir \
-    "$IMAGE" \
-    python3 /app/MICUM.py "/workdir/$FILENAME" "$@"
+    --user $(id -u):$(id -g) \
+    micum \
+    python3 /app/MICUM.py "/workdir/input_file" "$@"
 
-exit_code=$?
-if [ $exit_code -ne 0 ]; then
-    echo "Error: MICUM execution failed with exit code $exit_code"
-    exit $exit_code
+# Check the Docker exit status
+DOCKER_STATUS=$?
+if [ $DOCKER_STATUS -ne 0 ]; then
+    echo "Error: Docker command failed with status $DOCKER_STATUS"
 fi
+
+# Copy all output files from temp dir to original directory
+echo "Copying output files back to original directory"
+find "$TEMP_DIR" -type f -not -name "input_file" | while read file; do
+    # Use sudo to copy if normal copy fails
+    if ! cp "$file" "$INPUT_DIR/" 2>/dev/null; then
+        echo "Using sudo to copy: $(basename "$file")"
+        sudo cp "$file" "$INPUT_DIR/"
+        sudo chown $(id -u):$(id -g) "$INPUT_DIR/$(basename "$file")"
+    else
+        echo "Copied: $(basename "$file")"
+    fi
+done
+
+# Clean up temporary directory with sudo if needed
+echo "Cleaning up temporary directory"
+if ! rm -rf "$TEMP_DIR" 2>/dev/null; then
+    echo "Using sudo to remove temporary directory"
+    sudo rm -rf "$TEMP_DIR"
+fi
+
+echo "Process complete. Output files saved to: $INPUT_DIR"

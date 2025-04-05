@@ -1,6 +1,7 @@
-FROM --platform=linux/amd64 ubuntu:20.04
+FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONPATH="/usr/local/lib/python3.7/site-packages"
 
 # Install required packages
 RUN apt-get update && apt-get install -y \
@@ -94,7 +95,7 @@ RUN git clone https://github.com/Pas-Kapli/mptp.git /app/mptp && \
 # Copy application files
 COPY ./app /app
 
-# Create entrypoint script
+# Copy entrypoint script
 COPY ./entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
@@ -108,4 +109,5 @@ ENV PATH="/usr/local/bin:${PATH}"
 
 WORKDIR /app
 
+# Ensure we always execute Python scripts with python3
 ENTRYPOINT ["/entrypoint.sh"]

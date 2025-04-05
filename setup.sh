@@ -1,0 +1,318 @@
+#!/bin/bash
+
+# Universal setup script for MICUM (MacOS and Ubuntu)
+
+# Detect OS
+if [ "$(uname)" == "Darwin" ]; then
+    # MacOS
+    OS_TYPE="macos"
+    SCRIPT_DIR="$HOME/bin"
+    if [[ -f "$HOME/.zshrc" ]]; then
+        PROFILE="$HOME/.zshrc"
+    else
+        PROFILE="$HOME/.bash_profile"
+    fi
+elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+    # Linux
+    OS_TYPE="linux"
+    SCRIPT_DIR="$HOME/bin"
+    PROFILE="$HOME/.bashrc"
+
+    # Check for realpath command on Linux
+    if ! command -v realpath &> /dev/null; then
+        echo "Installing realpath..."
+        sudo apt-get update && sudo apt-get install -y coreutils || { echo "Error: Failed to install coreutils."; exit 1; }
+    fi
+else
+    echo "Unsupported OS"
+    exit 1
+fi
+
+echo "Setting up MICUM for ${OS_TYPE}..."
+
+# Create directory for scripts if it doesn't exist
+mkdir -p "$SCRIPT_DIR"
+
+# Add to PATH if not already there
+if [[ ":$PATH:" != *":$SCRIPT_DIR:"* ]]; then
+    echo "Adding $SCRIPT_DIR to PATH"
+    echo 'export PATH="$HOME/bin:$PATH"' >> "$PROFILE"
+    export PATH="$HOME/bin:$PATH"
+fi
+
+# Create the micum script with OS-specific settings
+cat > "$SCRIPT_DIR/micum" << 'EOF'
+#!/bin/bash
+
+# Check if we have arguments
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 <input_file> [options]"
+    exit 1
+fi
+
+# Get absolute path of the input file (cross-platform compatible way)
+if [ "$(uname)" == "Darwin" ]; then
+    # macOS approach - don't use realpath which may have different options on BSD
+    INPUT_FILE=$(cd "$(dirname "$1")" && pwd)/$(basename "$1")
+else
+    # Linux approach
+    INPUT_FILE=$(realpath "$1")
+fi
+
+INPUT_DIR=$(dirname "$INPUT_FILE")
+FILENAME=$(basename "$INPUT_FILE")
+
+# Check if input file exists
+if [ ! -f "$INPUT_FILE" ]; then
+    echo "Error: Input file '$INPUT_FILE' not found"
+    exit 1
+fi
+
+# Remove first argument (input file) from args list
+shift
+
+# Create a temporary directory
+TEMP_DIR=$(mktemp -d)
+echo "Creating temporary directory: $TEMP_DIR"
+
+# Copy input file to temp directory
+cp "$INPUT_FILE" "$TEMP_DIR/input_file"
+
+# Platform detection
+if [ "$(uname)" == "Darwin" ]; then
+    # macOS needs platform specification
+    PLATFORM_FLAG="--platform linux/amd64"
+else
+    # Linux doesn't need platform specification
+    PLATFORM_FLAG=""
+fi
+
+echo "Running Docker with file from temporary directory"
+
+# Run Docker container with the appropriate command and platform settings
+# Adding user mapping to ensure files are created with current user permissions
+docker run --rm -it ${PLATFORM_FLAG} \
+    -v "$TEMP_DIR:/workdir" \
+    -v "$INPUT_DIR:/output" \
+    -w /workdir \
+    --user $(id -u):$(id -g) \
+    micum \
+    python3 /app/MICUM.py "/workdir/input_file" "$@"
+
+# Check the Docker exit status
+DOCKER_STATUS=$?
+if [ $DOCKER_STATUS -ne 0 ]; then
+    echo "Error: Docker command failed with status $DOCKER_STATUS"
+fi
+
+# Copy all output files from temp dir to original directory
+echo "Copying output files back to original directory"
+find "$TEMP_DIR" -type f -not -name "input_file" | while read file; do
+    # Use sudo to copy if normal copy fails
+    if ! cp "$file" "$INPUT_DIR/" 2>/dev/null; then
+        echo "Using sudo to copy: $(basename "$file")"
+        sudo cp "$file" "$INPUT_DIR/"
+        sudo chown $(id -u):$(id -g) "$INPUT_DIR/$(basename "$file")"
+    else
+        echo "Copied: $(basename "$file")"
+    fi
+done
+
+# Clean up temporary directory with sudo if needed
+echo "Cleaning up temporary directory"
+if ! rm -rf "$TEMP_DIR" 2>/dev/null; then
+    echo "Using sudo to remove temporary directory"
+    sudo rm -rf "$TEMP_DIR"
+fi
+
+echo "Process complete. Output files saved to: $INPUT_DIR"
+EOF
+
+# Create the merge_data script with similar OS-specific settings
+cat > "$SCRIPT_DIR/merge_data" << 'EOF'
+#!/bin/bash
+
+# Check if we have arguments
+if [ $# -lt 6 ]; then
+    echo "Error: Insufficient arguments provided"
+    echo "Usage: $0 -q <qiime_file> -m <micum_file> -f <format> [-o <output_file>] [-d]"
+    exit 1
+fi
+
+# Parse arguments to find file paths
+QIIME_FILE=""
+MICUM_FILE=""
+FORMAT=""
+OUTPUT_FILE=""
+DEBUG=""
+OTHER_ARGS=""
+
+# Simple argument parser
+index=1
+while [ $index -le $# ]; do
+    current_arg=${!index}
+
+    if [ "$current_arg" = "-q" ]; then
+        next_index=$((index + 1))
+        QIIME_FILE=${!next_index}
+        index=$((index + 2))
+    elif [ "$current_arg" = "-m" ]; then
+        next_index=$((index + 1))
+        MICUM_FILE=${!next_index}
+        index=$((index + 2))
+    elif [ "$current_arg" = "-f" ]; then
+        next_index=$((index + 1))
+        FORMAT=${!next_index}
+        index=$((index + 2))
+    elif [ "$current_arg" = "-o" ]; then
+        next_index=$((index + 1))
+        OUTPUT_FILE=${!next_index}
+        index=$((index + 2))
+    elif [ "$current_arg" = "-d" ]; then
+        DEBUG="-d"
+        index=$((index + 1))
+    else
+        OTHER_ARGS="$OTHER_ARGS $current_arg"
+        index=$((index + 1))
+    fi
+done
+
+# Check if required files were specified
+if [ -z "$QIIME_FILE" ] || [ -z "$MICUM_FILE" ] || [ -z "$FORMAT" ]; then
+    echo "Error: QIIME file (-q), MICUM file (-m), and format (-f) must be specified"
+    exit 1
+fi
+
+# Get absolute paths of input files (cross-platform compatible way)
+if [ "$(uname)" == "Darwin" ]; then
+    # macOS approach - don't use realpath which may have different options on BSD
+    QIIME_FILE=$(cd "$(dirname "$QIIME_FILE")" && pwd)/$(basename "$QIIME_FILE")
+    MICUM_FILE=$(cd "$(dirname "$MICUM_FILE")" && pwd)/$(basename "$MICUM_FILE")
+else
+    # Linux approach
+    QIIME_FILE=$(realpath "$QIIME_FILE")
+    MICUM_FILE=$(realpath "$MICUM_FILE")
+fi
+
+# Check if files exist
+if [ ! -f "$QIIME_FILE" ]; then
+    echo "Error: QIIME file not found: $QIIME_FILE"
+    exit 1
+fi
+
+if [ ! -f "$MICUM_FILE" ]; then
+    echo "Error: MICUM file not found: $MICUM_FILE"
+    exit 1
+fi
+
+# Get current directory and file names
+CURRENT_DIR=$(pwd)
+QIIME_BASENAME=$(basename "$QIIME_FILE")
+MICUM_BASENAME=$(basename "$MICUM_FILE")
+
+# Create a temporary directory
+TEMP_DIR=$(mktemp -d)
+echo "Creating temporary directory: $TEMP_DIR"
+
+# Copy files to temp directory
+cp "$QIIME_FILE" "$TEMP_DIR/qiime_file"
+cp "$MICUM_FILE" "$TEMP_DIR/micum_file"
+
+# Platform detection
+if [ "$(uname)" == "Darwin" ]; then
+    # macOS needs platform specification
+    PLATFORM_FLAG="--platform linux/amd64"
+else
+    # Linux doesn't need platform specification
+    PLATFORM_FLAG=""
+fi
+
+# Determine output filename if provided
+OUTPUT_ARGS=""
+if [ -n "$OUTPUT_FILE" ]; then
+    OUTPUT_BASENAME=$(basename "$OUTPUT_FILE")
+    OUTPUT_ARGS="-o $OUTPUT_BASENAME"
+fi
+
+echo "Running Docker with files from temporary directory"
+
+# Run Docker container with the appropriate command
+# Adding user mapping to ensure files are created with current user permissions
+docker run --rm -it ${PLATFORM_FLAG} \
+    -v "$TEMP_DIR:/workdir" \
+    -w /workdir \
+    --user $(id -u):$(id -g) \
+    micum \
+    python3 /app/merge_data.py -q "/workdir/qiime_file" -m "/workdir/micum_file" -f "$FORMAT" $OUTPUT_ARGS $DEBUG $OTHER_ARGS
+
+# Check the Docker exit status
+DOCKER_STATUS=$?
+if [ $DOCKER_STATUS -ne 0 ]; then
+    echo "Error: Docker command failed with status $DOCKER_STATUS"
+fi
+
+# Determine the output file name pattern
+if [ -n "$OUTPUT_FILE" ]; then
+    # If output file was specified, look for this file
+    OUTPUT_PATTERN="$OUTPUT_BASENAME"
+else
+    # If no output file was specified, look for timestamp-based files
+    OUTPUT_PATTERN="*_merged.*"
+fi
+
+# Copy all possible output files from temp dir to current directory
+echo "Copying output files back to current directory"
+find "$TEMP_DIR" -name "$OUTPUT_PATTERN" -o -name "*.csv" -o -name "*.tsv" | while read file; do
+    # Use sudo to copy if normal copy fails
+    if ! cp "$file" "$CURRENT_DIR/" 2>/dev/null; then
+        echo "Using sudo to copy: $(basename "$file")"
+        sudo cp "$file" "$CURRENT_DIR/"
+        sudo chown $(id -u):$(id -g) "$CURRENT_DIR/$(basename "$file")"
+    else
+        echo "Copied: $(basename "$file")"
+    fi
+done
+
+# Count how many files were copied
+OUTPUT_COUNT=$(find "$TEMP_DIR" -name "$OUTPUT_PATTERN" -o -name "*.csv" -o -name "*.tsv" | wc -l)
+
+# Clean up temporary directory with sudo if needed
+echo "Cleaning up temporary directory"
+if ! rm -rf "$TEMP_DIR" 2>/dev/null; then
+    echo "Using sudo to remove temporary directory"
+    sudo rm -rf "$TEMP_DIR"
+fi
+
+# Final confirmation
+if [ "$OUTPUT_COUNT" -gt 0 ]; then
+    echo "Process complete. Output files saved to current directory."
+else
+    echo "WARNING: No output files were found! Check for errors in the processing."
+fi
+EOF
+
+# Make scripts executable
+chmod +x "$SCRIPT_DIR/micum"
+chmod +x "$SCRIPT_DIR/merge_data"
+
+# Build Docker image with platform awareness
+echo "Building Docker image..."
+if [ "$OS_TYPE" == "macos" ]; then
+    # macOS: Check for ARM vs Intel
+    if [ "$(uname -m)" == "arm64" ]; then
+        echo "Building for ARM64 MacOS (M1/M2/M3/M4)..."
+        docker build --platform linux/amd64 -t micum .
+    else
+        echo "Building for Intel MacOS..."
+        docker build -t micum .
+    fi
+else
+    # Linux
+    echo "Building for Linux..."
+    docker build -t micum .
+fi
+
+echo "Setup complete!"
+echo "You can now use 'micum' and 'merge_data' commands."
+echo "If commands are not found, please restart your terminal or run:"
+echo "source $PROFILE"
