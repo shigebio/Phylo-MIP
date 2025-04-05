@@ -12,6 +12,7 @@
   - 系統樹の作成([FASTTree](https://morgannprice.github.io/fasttree/))
   - 種の区分決定解析([bPTP](https://species.h-its.org/), [mPTP](https://github.com/Pas-Kapli/mptp))
 - Qiime2 の出力ファイルと MICUM パイプラインの出力ファイルのマージ: <b>merge_data.py</b>
+- MAcOSまたはLinuxOSで実行できることを確認済みですが、WindowsOSでもWSLを利用して実行可能です。
 
 ## Installation
 1. Dockerの導入

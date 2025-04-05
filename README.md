@@ -13,6 +13,7 @@ Designed for phylogenetic analysis using environmental DNA and more ...
   - Creating a phylogenetic tree([FASTTree](https://morgannprice.github.io/fasttree/))
   - Species classification analysis([bPTP](https://species.h-its.org/), [mPTP](https://github.com/Pas-Kapli/mptp))
 - Merging the output file of Qiime2 and the output file of MICUM pipline : <b>merge_data.py</b>
+- Confirmed that it can be run on MAcOS or LinuxOS, but it can also be run on WindowsOS using WSL.
 
 ## Installation
 1. Installing Docker
