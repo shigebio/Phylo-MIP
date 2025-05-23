@@ -99,6 +99,8 @@ COPY ./app /app
 COPY ./entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+USER root
+
 # Make scripts executable in container
 RUN echo '#!/bin/bash\npython3 /app/MICUM.py "$@"' > /usr/local/bin/micum && \
     echo '#!/bin/bash\npython3 /app/merge_data.py "$@"' > /usr/local/bin/merge_data && \
