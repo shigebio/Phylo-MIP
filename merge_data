@@ -52,15 +52,23 @@ if [ -z "$QIIME_FILE" ] || [ -z "$MICUM_FILE" ] || [ -z "$FORMAT" ]; then
 fi
 
 # Get absolute paths of input files (cross-platform compatible way)
-if [ "$(uname)" == "Darwin" ]; then
-    # macOS approach - don't use realpath -s which is not available on BSD
-    QIIME_FILE=$(cd "$(dirname "$QIIME_FILE")" && pwd)/$(basename "$QIIME_FILE")
-    MICUM_FILE=$(cd "$(dirname "$MICUM_FILE")" && pwd)/$(basename "$MICUM_FILE")
-else
-    # Linux approach
-    QIIME_FILE=$(realpath "$QIIME_FILE")
-    MICUM_FILE=$(realpath "$MICUM_FILE")
-fi
+case "$(uname -s)" in
+    Darwin)
+        # macOS approach
+        QIIME_FILE=$(cd "$(dirname "$QIIME_FILE")" && pwd)/$(basename "$QIIME_FILE")
+        MICUM_FILE=$(cd "$(dirname "$MICUM_FILE")" && pwd)/$(basename "$MICUM_FILE")
+        ;;
+    *)
+        # Linux/Windows WSL approach
+        if command -v realpath &> /dev/null; then
+            QIIME_FILE=$(realpath "$QIIME_FILE")
+            MICUM_FILE=$(realpath "$MICUM_FILE")
+        else
+            QIIME_FILE=$(cd "$(dirname "$QIIME_FILE")" && pwd)/$(basename "$QIIME_FILE")
+            MICUM_FILE=$(cd "$(dirname "$MICUM_FILE")" && pwd)/$(basename "$MICUM_FILE")
+        fi
+        ;;
+esac
 
 # Check if files exist
 if [ ! -f "$QIIME_FILE" ]; then
@@ -86,13 +94,23 @@ echo "Creating temporary directory: $TEMP_DIR"
 cp "$QIIME_FILE" "$TEMP_DIR/qiime_file"
 cp "$MICUM_FILE" "$TEMP_DIR/micum_file"
 
-# Platform detection
-if [ "$(uname)" == "Darwin" ]; then
-    # macOS needs platform specification
-    PLATFORM_FLAG="--platform linux/amd64"
+# Platform detection for Docker
+case "$(uname -s)" in
+    Darwin)
+        # macOS needs platform specification
+        PLATFORM_FLAG="--platform linux/amd64"
+        ;;
+    *)
+        # Linux/Windows WSL doesn't need platform specification
+        PLATFORM_FLAG=""
+        ;;
+esac
+
+# User ID handling (WSL compatibility)
+if command -v id &> /dev/null; then
+    USER_FLAG="--user $(id -u):$(id -g)"
 else
-    # Linux doesn't need platform specification
-    PLATFORM_FLAG=""
+    USER_FLAG=""
 fi
 
 # Determine output filename if provided
@@ -108,6 +126,7 @@ echo "Running Docker with files from temporary directory"
 docker run --rm -it ${PLATFORM_FLAG} \
     -v "$TEMP_DIR:/workdir" \
     -w /workdir \
+    ${USER_FLAG} \
     micum \
     python3 /app/merge_data.py -q "/workdir/qiime_file" -m "/workdir/micum_file" -f "$FORMAT" $OUTPUT_ARGS $DEBUG $OTHER_ARGS
 
@@ -115,33 +134,33 @@ docker run --rm -it ${PLATFORM_FLAG} \
 DOCKER_STATUS=$?
 if [ $DOCKER_STATUS -ne 0 ]; then
     echo "Error: Docker command failed with status $DOCKER_STATUS"
-    echo "Cleaning up temporary directory"
-    rm -rf "$TEMP_DIR"
-    exit $DOCKER_STATUS
 fi
 
 # Determine the output file name pattern
 if [ -n "$OUTPUT_FILE" ]; then
-    # If output file was specified, look for this file
-    OUTPUT_PATTERN="$OUTPUT_BASENAME"
+    OUTPUT_PATTERN="${OUTPUT_BASENAME}*"
 else
-    # If no output file was specified, look for timestamp-based files
     OUTPUT_PATTERN="*_merged.*"
 fi
 
 # Copy all possible output files from temp dir to current directory
 echo "Copying output files back to current directory"
-find "$TEMP_DIR" -name "$OUTPUT_PATTERN" -o -name "*.csv" -o -name "*.tsv" | while read file; do
+find "$TEMP_DIR" -maxdepth 1 \( -name "*.csv" -o -name "*.tsv" \) -type f | while read file; do
     cp "$file" "$CURRENT_DIR/"
     echo "Copied: $(basename "$file")"
 done
 
 # Count how many files were copied
-OUTPUT_COUNT=$(find "$TEMP_DIR" -name "$OUTPUT_PATTERN" -o -name "*.csv" -o -name "*.tsv" | wc -l)
+OUTPUT_COUNT=$(find "$TEMP_DIR" -name "$OUTPUT_PATTERN" -o -name ".csv" -o -name ".tsv" | wc -l)
 
 # Clean up temporary directory
 echo "Cleaning up temporary directory"
-rm -rf "$TEMP_DIR"
+if ! rm -rf "$TEMP_DIR" 2>/dev/null; then
+    if command -v sudo &> /dev/null; then
+        echo "Using sudo to remove temporary directory"
+        sudo rm -rf "$TEMP_DIR"
+    fi
+fi
 
 # Final confirmation
 if [ "$OUTPUT_COUNT" -gt 0 ]; then
