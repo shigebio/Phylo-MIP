@@ -1,11 +1,12 @@
 import os
+import shutil
+import stat
 from datetime import datetime
 import pandas as pd
 from Bio import Entrez, Phylo
 import requests
 import sys
 import time
-from datetime import datetime
 import random
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -14,7 +15,6 @@ import re
 import six
 import csv
 import glob
-from datetime import datetime
 from ete3 import NodeStyle
 sys.path.append('/usr/local/lib/python3.7/site-packages')
 
@@ -40,14 +40,119 @@ bptp_group = parser.add_argument_group('bPTP options', 'Options for bPTP analysi
 bptp_group.add_argument('--mcmc', type=int, default=100000, help='Number of MCMC iterations (default: 100000)')
 bptp_group.add_argument('--thinning', type=int, default=100, help='Thinning value (default: 100)')
 bptp_group.add_argument('--burnin', type=float, default=0.1, help='Burn-in fraction (default: 0.1)')
-bptp_group.add_argument('--seed', type=int, default=default_seed, help='Random seed (default: {default_seed})')
+bptp_group.add_argument('--seed', type=int, default=default_seed, help=f'Random seed (default: {default_seed})')
 
 args = parser.parse_args()
 input_file_path = os.path.abspath(args.input_csv)
 input_dir = os.path.dirname(input_file_path)
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 output_dir = os.path.join(input_dir, f"micum_output_{timestamp}")
+print(f"Output directory will be created at: {output_dir}")
 os.makedirs(output_dir, exist_ok=True)
+
+taxonomy_dir = os.path.join(output_dir, "taxonomy")
+alignment_dir = os.path.join(output_dir, "alignment")
+phylogeny_dir = os.path.join(output_dir, "phylogeny")
+bptp_base_dir = os.path.join(output_dir, "bptp")
+mptp_base_dir = os.path.join(output_dir, "mptp")
+
+def copy_with_directory_structure(src_dir, dest_dir):
+    """
+    A function to copy files while preserving the directory structure
+    """
+    try:
+        # If the directory exists, delete it
+        if os.path.exists(dest_dir):
+            shutil.rmtree(dest_dir)
+
+        shutil.copytree(src_dir, dest_dir)
+        print(f"Successfully copied directory structure from {src_dir} to {dest_dir}")
+
+    except Exception as e:
+        print(f"Error copying directory structure: {e}")
+
+def copy_output_files_with_structure(output_dir, original_dir):
+    """
+    A function that copies the output directory to the original directory while preserving the directory structure.
+    """
+    output_dirname = os.path.basename(output_dir)
+    dest_path = os.path.join(original_dir, f"copied_{output_dirname}")
+
+    try:
+        if os.path.exists(dest_path):
+            shutil.rmtree(dest_path)
+        shutil.copytree(output_dir, dest_path)
+        print(f"Successfully copied directory to: {dest_path}")
+        return dest_path
+    except Exception as e:
+        print(f"Error copying output files: {e}")
+        return None
+
+# Create subdirectories
+def create_output_directories():
+    """
+    Create the output directory and set the correct permissions
+    """
+    directories = [
+        output_dir,
+        taxonomy_dir,
+        alignment_dir,
+        phylogeny_dir,
+        bptp_base_dir,
+        mptp_base_dir
+    ]
+
+    for directory in directories:
+        try:
+            os.makedirs(directory, exist_ok=True)
+            try:
+                os.chmod(directory, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+            except (OSError, PermissionError) as e:
+                print(f"Warning: Could not set permissions for {directory}: {e}")
+
+            print(f"Created directory: {directory}")
+
+            if not os.path.exists(directory):
+                print(f"ERROR: Failed to create directory: {directory}")
+            else:
+                print(f"SUCCESS: Directory exists: {directory}")
+
+        except Exception as e:
+            print(f"Error creating directory {directory}: {e}")
+            sys.exit(1)
+
+create_output_directories()
+
+def verify_directory_structure(): # debug code
+    """
+    Check the directory structure and file location
+    """
+    print("\n=== Directory Structure Verification ===")
+    for root, dirs, files in os.walk(output_dir):
+        level = root.replace(output_dir, '').count(os.sep)
+        indent = '  ' * level
+        print(f"{indent}{os.path.basename(root)}/")
+        subindent = '  ' * (level + 1)
+        for file in files:
+            print(f"{subindent}{file}")
+    print("=========================================\n")
+
+verify_directory_structure()
+
+def ensure_directory_exists(file_path):
+    """
+    Verify that a directory in a file path exists
+    """
+    directory = os.path.dirname(file_path)
+    if not os.path.exists(directory):
+        try:
+            os.makedirs(directory, exist_ok=True)
+            try:
+                os.chmod(directory, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+            except (OSError, PermissionError):
+                pass  # Attempt to create file even if permission setting fails
+        except Exception as e:
+            print(f"Warning: Could not create directory {directory}: {e}")
 
 # For filename sanitization
 invalid_chars = r'[<>:"/\\|?*]'
@@ -97,7 +202,7 @@ def get_gbif_taxonomic_info(species_name):
     url = f"https://api.gbif.org/v1/species/match?name={species_name}"
     for attempt in range(3):
         try:
-            response = requests.get(url, timeout=600)
+            response = requests.get(url, timeout=30)
             if response.status_code == 200:
                 data = response.json()
                 if 'order' in data and data['order'] is not None:  # Ensuring taxonomic info exists
@@ -248,27 +353,40 @@ def process_with_progress(filter_class=None):
 
     print()  # End progress tracking
 
-    output_fasta = save_fasta(os.path.join(output_dir, 'pre_filtered_output.fasta'), fasta_list)
-    save_csv(os.path.join(output_dir, 'pre_filtered_output.csv'), csv_data)
+    taxonomy_fasta = save_fasta(os.path.join(taxonomy_dir, 'taxonomic_sequences.fasta'), fasta_list)
+    save_csv(os.path.join(taxonomy_dir, 'taxonomic_data.csv'), csv_data)
 
     print("Processing complete.")
 
     if filter_class:
-        output_fasta = save_fasta(os.path.join(output_dir, 'filtered_output.fasta'), filtered_fasta_list)
-        save_csv(os.path.join(output_dir, 'filtered_output.csv'), filtered_csv_data)
+        filtered_fasta = save_fasta(os.path.join(taxonomy_dir, 'filtered_taxonomic_sequences.fasta'), filtered_fasta_list)
+        save_csv(os.path.join(taxonomy_dir, 'filtered_taxonomic_data.csv'), filtered_csv_data)
+        return filtered_fasta
 
-    return output_fasta
+    return taxonomy_fasta
 
 def save_fasta(file_path, fasta_entries):
-    with open(file_path, 'w') as f:
-        f.writelines(fasta_entries)
-    return file_path
+    ensure_directory_exists(file_path)
+    try:
+        with open(file_path, 'w') as f:
+            f.writelines(fasta_entries)
+        print(f"SUCCESS: Saved FASTA to {file_path}")
+        return file_path
+    except Exception as e:
+        print(f"ERROR: Failed to save FASTA to {file_path}: {e}")
+        raise
 
 def save_csv(file_path, csv_rows):
-    with open(file_path, 'w', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(['qseqid', 'accessionID', 'class', 'order', 'taxonomic_name', 'pident', 'qseq', 'source']) # Header Row
-        writer.writerows(csv_rows)
+    ensure_directory_exists(file_path)
+    try:
+        with open(file_path, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['qseqid', 'accessionID', 'class', 'order', 'taxonomic_name', 'pident', 'qseq', 'source'])
+            writer.writerows(csv_rows)
+        print(f"SUCCESS: Saved CSV to {file_path}")
+    except Exception as e:
+        print(f"ERROR: Failed to save CSV to {file_path}: {e}")
+        raise
 
 def csv_to_fasta(input_csv, output_fasta): # IMO: It may be more streamlined to combine the conversion to FASTA with the process in process_row
     # Inport CSV
@@ -302,27 +420,33 @@ def run_vsearch(input_fasta, output_centroids, output_dir):
         os.makedirs(output_dir)
 
     # Run VSEARCH
-    haplotype_tsv = os.path.join(output_dir, "haplotype_list.tsv")
-    output_centroids_path = os.path.join(output_dir, output_centroids)  # Set output path for Centroids
+    haplotype_tsv = os.path.join(alignment_dir, f"{timestamp}_haplotype_clusters.tsv")
+    output_centroids_path = os.path.join(alignment_dir, output_centroids)
     vsearch_cmd = f"vsearch --cluster_fast {input_fasta} -id 1 --centroids {output_centroids_path} --mothur_shared_out {haplotype_tsv}"
     print(f"Running VSEARCH: {vsearch_cmd}")
     subprocess.run(vsearch_cmd, shell=True, check=True)
 
     # Convert TSV to CSV
     haplotype_df = pd.read_csv(haplotype_tsv, sep="\t")
-    csv_output_file = os.path.join(output_dir, "haplotype_list.csv")
+    csv_output_file = os.path.join(alignment_dir, f"{timestamp}_haplotype_clusters.csv")
     haplotype_df.to_csv(csv_output_file, index=False)
     print(f"Haplotype data saved to {csv_output_file}")
+
+    # Return the actual path of the centroids file
+    return output_centroids_path
 
 
 # MAFFT
 def run_mafft(vsearch_output, output_aligned):
-    mafft_cmd = f"mafft --auto {vsearch_output} > {os.path.join(output_dir, output_aligned)}"
+    aligned_path = os.path.join(alignment_dir, output_aligned)
+    mafft_cmd = f"mafft --auto {vsearch_output} > {aligned_path}"
     print(f"Running MAFFT: {mafft_cmd}")
     subprocess.run(mafft_cmd, shell=True, check=True)
+    return aligned_path
 
 # FastTree
 def run_fasttree(input_aligned, output_tree, method="NJ", bootstrap=1000, gamma=False, outgroup=None):
+    tree_path = os.path.join(phylogeny_dir, f"{timestamp}_{method}_{output_tree}")
     fasttree_cmd = "fasttree -nt"
 
     if method == "NJ":
@@ -341,26 +465,24 @@ def run_fasttree(input_aligned, output_tree, method="NJ", bootstrap=1000, gamma=
     if outgroup:
         fasttree_cmd += f" -outgroup {outgroup}"
 
-    fasttree_cmd += f" {input_aligned} > {os.path.join(output_dir, output_tree)}"
+    fasttree_cmd += f" {input_aligned} > {tree_path}"
     print(f"Running FastTree: {fasttree_cmd}")
     subprocess.run(fasttree_cmd, shell=True, check=True)
-    print(f"Phylogenetic tree saved to {output_tree}")
+    print(f"Phylogenetic tree saved to {tree_path}")
+    return tree_path
 
 # bPTP
-def run_bptp(tree_file, mcmc, thinning, burnin, seed, output_dir):
+def run_bptp(tree_file, mcmc, thinning, burnin, seed, base_dir):
     try:
-        # Build path for bPTP.py
         bptp_path = os.path.join('/app/PTP/bin', 'bPTP.py')
 
-        # Creating the output directory
-        now = datetime.now().strftime('%Y%m%d_%H%M%S')  # Get date, minute and second
-        bptp_output_dir = os.path.join(output_dir, f'bPTP_{now}')
-        os.makedirs(bptp_output_dir, exist_ok=True)  # Create directory (skip if exists)
+        # Create timestamped bPTP directory
+        bptp_output_dir = os.path.join(base_dir, f'{timestamp}_bPTP_analysis')
+        os.makedirs(bptp_output_dir, exist_ok=True)
 
-        # Set the output file name
-        output_file = os.path.join(bptp_output_dir, 'output_base_tree_bptp_output.txt')
+        # Set the output file name with descriptive prefix
+        output_file = os.path.join(bptp_output_dir, f'{timestamp}_bPTP_species_delimitation')
 
-        # Build a command to run bPTP.py
         bptp_command = [
             'xvfb-run', '-a', 'python3', bptp_path,
             '-t', tree_file,
@@ -371,24 +493,21 @@ def run_bptp(tree_file, mcmc, thinning, burnin, seed, output_dir):
             '-b', str(burnin)
         ]
 
-        # Run bPTP command
         print(f"Running bPTP with command: {' '.join(bptp_command)}")
         subprocess.run(bptp_command, check=True)
         print('bPTP analysis complete.')
     except subprocess.CalledProcessError as e:
         print(f"Error running bPTP.py: {e}")
 
-def run_mptp(tree_file, output_dir):
+def run_mptp(tree_file, base_dir):
     try:
-        # Creating the output directory
-        now = datetime.now().strftime('%Y%m%d_%H%M%S')  # Get date, minute and second
-        mptp_output_dir = os.path.join(output_dir, f'mPTP_{now}')
-        os.makedirs(mptp_output_dir, exist_ok=True)  # Create directory (skip if exists)
+        # Create timestamped mPTP directory
+        mptp_output_dir = os.path.join(base_dir, f'{timestamp}_mPTP_analysis')
+        os.makedirs(mptp_output_dir, exist_ok=True)
 
-        # Set the output file name
-        output_file = os.path.join(mptp_output_dir, 'output_base_tree_mptp_output.txt')  # Output file path
+        # Set the output file name with descriptive prefix
+        output_file = os.path.join(mptp_output_dir, f'{timestamp}_mPTP_species_delimitation')
 
-        # Run mPTP
         subprocess.run(
             ['xvfb-run', '-a', 'mptp', '-tree_file', tree_file,
              '-output_file', output_file, '-ml', '-single'],
@@ -526,20 +645,18 @@ def process_ptp_outputs():
     """
     print("Processing PTP output files...")
 
-    # Find all bPTP output directories
-    bptp_dirs = glob.glob(os.path.join(output_dir, 'bPTP_*'))
+    # Find bPTP and mPTP directories in their respective base directories
+    bptp_dirs = glob.glob(os.path.join(bptp_base_dir, f'{timestamp}_bPTP_analysis*'))
+    mptp_dirs = glob.glob(os.path.join(mptp_base_dir, f'{timestamp}_mPTP_analysis*'))
 
-    # Find all mPTP output directories
-    mptp_dirs = glob.glob(os.path.join(output_dir, 'mPTP_*'))
-
-    # Find all filtered CSV files
-    csv_files = glob.glob(os.path.join(output_dir, '*_filtered_output.csv'))
+    # Find CSV files in taxonomy directory
+    csv_files = glob.glob(os.path.join(taxonomy_dir, '*taxonomic_data.csv'))
 
     # If no filtered CSV files found, check for other relevant CSVs
     if not csv_files:
+        csv_files = glob.glob(os.path.join(taxonomy_dir, '*.csv'))
+    if not csv_files:
         csv_files = glob.glob(os.path.join(output_dir, '*.csv'))
-        if csv_files:
-            print(f"No '*_filtered_output.csv' files found. Using available CSV files: {csv_files}")
 
     # Process bPTP files
     bptp_bayes_data = {}
@@ -586,57 +703,84 @@ def process_ptp_outputs():
 
     print("PTP output processing complete!")
 
-sanitized_input_name = re.sub(invalid_chars, '_', f"{args.input_csv}")
+print("Creating output directories...")
+create_output_directories()
+print("Directories created successfully.")
+
+sanitized_input_name = re.sub(invalid_chars, '_', os.path.basename(args.input_csv))
 output_base = args.output_base if args.output_base else f"{sanitized_input_name}_output"
 
 if args.onlyp: # Branch to execute only phylogenetic analysis and later
     input_csv = os.path.join(input_file_path)
-    filtered_filename = os.path.join(output_dir, f"{output_base}_filtered.csv")  # Saved under ../output
+    filtered_filename = os.path.join(taxonomy_dir, f"{output_base}_filtered.csv")
 
     if args.class_name:  # If --class option is specified, filter by the specified class.
         filter_by_class(input_csv, filtered_filename, args.class_name)
 
-    fasta_filename = os.path.join(output_dir, f"{output_base}.fasta")
-    output_fasta = csv_to_fasta(input_csv, fasta_filename)
+    fasta_filename = os.path.join(taxonomy_dir, f"{output_base}.fasta")
+    main_fasta = csv_to_fasta(input_csv, fasta_filename)
 
 else:
     # Obtaining classification infomation
-    output_fasta = process_with_progress(args.class_name)
+    main_fasta = process_with_progress(args.class_name)
 
 # When the --tree option is present: Create a phylogenetic tree using VSEARCH→MAFFT→FastTree
 if args.tree:
-    vsearch_output = os.path.join(output_dir, "output_vsearch.fasta")
-    aligned_fasta = os.path.join(output_dir, f"{output_base}_aligned.fasta")
-    tree_file = os.path.join(output_dir, f"{output_base}_tree.nwk")
+    vsearch_output_name = f"{timestamp}_clustered_sequences.fasta"
+    aligned_fasta_name = f"{timestamp}_aligned_sequences.fasta"
+    tree_file_name = f"{timestamp}_{args.method}_phylogenetic_tree.nwk"
 
-    # Run VSEARCH to cluster sequences
-    run_vsearch(output_fasta, vsearch_output, output_dir)
+    # Run VSEARCH
+    vsearch_output_path = run_vsearch(main_fasta, vsearch_output_name, alignment_dir)
 
-    # Run MAFFT on the VSEARCH output
-    run_mafft(vsearch_output, aligned_fasta)
+    # Run MAFFT
+    aligned_fasta_path = run_mafft(vsearch_output_path, aligned_fasta_name)
 
     # Run FastTree
-    mafft_output = os.path.join(output_dir, aligned_fasta)
-    run_fasttree(mafft_output, tree_file, method=args.method, bootstrap=args.bootstrap, gamma=args.gamma, outgroup=args.outgroup)
+    tree_file_path = run_fasttree(aligned_fasta_path, tree_file_name,
+                                  method=args.method, bootstrap=args.bootstrap,
+                                  gamma=args.gamma, outgroup=args.outgroup)
 
-    # Exporting NEXUS files
-    nwk = Phylo.read(os.path.join(output_dir, tree_file), 'newick')
-    Phylo.write(nwk, os.path.join(output_dir, f"{output_base}_tree.nex"), 'nexus')
+    # Export NEXUS files to phylogeny directory
+    nwk = Phylo.read(tree_file_path, 'newick')
+    nexus_path = os.path.join(phylogeny_dir, f"{timestamp}_{args.method}_phylogenetic_tree.nex")
+    Phylo.write(nwk, nexus_path, 'nexus')
     print("Newick file from FastTree has been converted to NEXUS format.")
 
-    nexus_output = os.path.join(output_dir, tree_file)
-
-    # Run bPTP
-    mcmc = args.mcmc
-    thinning = args.thinning
-    burnin = args.burnin
-    seed = args.seed
-
-    print(f"MCMC: {mcmc}, Thinning: {thinning}, Burn-in: {burnin}, Seed: {seed}")
-    run_bptp(nexus_output, mcmc, thinning, burnin, seed, output_dir)
-
-    # Run mPTP
-    run_mptp(nexus_output, output_dir)
+    print(f"MCMC: {args.mcmc}, Thinning: {args.thinning}, Burn-in: {args.burnin}, Seed: {args.seed}")
+    # Run bPTP and mPTP with organized directories
+    run_bptp(tree_file_path, args.mcmc, args.thinning, args.burnin, args.seed, bptp_base_dir)
+    run_mptp(tree_file_path, mptp_base_dir)
 
     # Process PTP outputs and update CSV files
     process_ptp_outputs()
+
+print("\n=== Final Output Summary ===")
+verify_directory_structure()
+print("Script execution completed.")
+
+# Copy with directory structure intact
+print("Copying output files with directory structure...")
+final_output_path = copy_output_files_with_structure(output_dir, input_dir)
+print(f"Process complete. Output files saved to: {final_output_path}")
+
+print("Checking output files location...")
+if os.path.exists(output_dir):
+    print(f"Output directory exists at: {output_dir}")
+    final_output_path = copy_output_files_with_structure(output_dir, input_dir)
+    if final_output_path:
+        print(f"Process complete. Output files saved to: {final_output_path}")
+    else:
+        print(f"Using original output directory: {output_dir}")
+else:
+    print(f"Error: Output directory not found at {output_dir}")
+    # Search for an alternative output directory
+    alt_outputs = glob.glob(os.path.join(input_dir, "micum_output_*"))
+    if alt_outputs:
+        print(f"Found alternative output directories: {alt_outputs}")
+        final_output_path = alt_outputs[-1]  # Use the latest
+        print(f"Using alternative output: {final_output_path}")
+    else:
+        print("No output directories found")
+
+print("Script execution completed.")
