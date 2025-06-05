@@ -263,7 +263,7 @@ def process_row(index, row):
             # If you are unable to obtain information from NCBI
             taxonomic_name = "Uncertain_taxonomy"  # Indeterminate taxon
             fasta_entry = f">{sanitize_otu_name(f'{qseqid}_{accessionID}_{taxonomic_name}_{pident:.2f}')}\n{qseq}\n"
-            csv_entry = [qseqid, accessionID, 'Unknown', 'Unknown', taxonomic_name, pident, qseq, 'NCBI Failed']
+            csv_entry = [qseqid, accessionID, 'Unknown', 'Unknown', 'Unknown', taxonomic_name, pident, qseq, 'NCBI Failed']
             return fasta_entry, csv_entry
 
         organism_name = records[0]['GBSeq_organism']
@@ -297,12 +297,13 @@ def process_row(index, row):
         elif 85.00 <= pident < 90.00:
             taxonomic_name = taxonomic_info.get('order', 'Uncertain_taxonomy')
 
-        order = taxonomic_info.get('order', 'Unknown')
         class_name = taxonomic_info.get('class', 'Unknown')
+        order = taxonomic_info.get('order', 'Unknown')
+        family_name = taxonomic_info.get('family', 'Unknown')
 
         # Generates FASTA and CSV output
         fasta_entry = f">{sanitize_otu_name(f'{qseqid}_{accessionID}_{taxonomic_name}_{pident:.2f}')}\n{qseq}\n"
-        csv_entry = [qseqid, accessionID, class_name, order, taxonomic_name, pident, qseq, source]
+        csv_entry = [qseqid, accessionID, class_name, order, family_name, taxonomic_name, pident, qseq, source]
 
         return fasta_entry, csv_entry
 
@@ -311,7 +312,7 @@ def process_row(index, row):
         # Use "Uncertain_taxonomy" on error
         taxonomic_name = "Uncertain_taxonomy"
         fasta_entry = f">{sanitize_otu_name(f'{qseqid}_{accessionID}_{taxonomic_name}_{pident:.2f}')}\n{qseq}\n"
-        csv_entry = [qseqid, accessionID, 'Unknown', 'Unknown', taxonomic_name, pident, qseq, 'Error']
+        csv_entry = [qseqid, accessionID, 'Unknown', 'Unknown', 'Unknown', taxonomic_name, pident, qseq, 'Error']
         return fasta_entry, csv_entry
 
 # Function to display the progress of an API request
@@ -359,8 +360,8 @@ def process_with_progress(filter_class=None):
     print("Processing complete.")
 
     if filter_class:
-        filtered_fasta = save_fasta(os.path.join(taxonomy_dir, 'filtered_taxonomic_sequences.fasta'), filtered_fasta_list)
-        save_csv(os.path.join(taxonomy_dir, 'filtered_taxonomic_data.csv'), filtered_csv_data)
+        filtered_fasta = save_fasta(os.path.join(taxonomy_dir, 'class_filtered_taxonomic_sequences.fasta'), filtered_fasta_list)
+        save_csv(os.path.join(taxonomy_dir, 'class_filtered_taxonomic_data.csv'), filtered_csv_data)
         return filtered_fasta
 
     return taxonomy_fasta
@@ -381,7 +382,7 @@ def save_csv(file_path, csv_rows):
     try:
         with open(file_path, 'w', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(['qseqid', 'accessionID', 'class', 'order', 'taxonomic_name', 'pident', 'qseq', 'source'])
+            writer.writerow(['qseqid', 'accessionID', 'class', 'order', 'family', 'taxonomic_name', 'pident', 'qseq', 'source'])
             writer.writerows(csv_rows)
         print(f"SUCCESS: Saved CSV to {file_path}")
     except Exception as e:

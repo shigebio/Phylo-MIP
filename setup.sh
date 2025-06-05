@@ -107,15 +107,11 @@ fi
 
 # Copy all output files from temp dir to original directory
 echo "Copying output files back to original directory"
-find "$TEMP_DIR" -type f -not -name "input_file" | while read file; do
-    # Use sudo to copy if normal copy fails
-    if ! cp "$file" "$INPUT_DIR/" 2>/dev/null; then
-        echo "Using sudo to copy: $(basename "$file")"
-        sudo cp "$file" "$INPUT_DIR/"
-        sudo chown $(id -u):$(id -g) "$INPUT_DIR/$(basename "$file")"
-    else
-        echo "Copied: $(basename "$file")"
-    fi
+find "$TEMP_DIR" -type d -name "micum_output_*" | while read dir; do
+    BASENAME=$(basename "$dir")
+    DEST="$INPUT_DIR/$BASENAME"
+    echo "Copying $dir to $DEST"
+    cp -r "$dir" "$DEST"
 done
 
 # Clean up temporary directory with sudo if needed
