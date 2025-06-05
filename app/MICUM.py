@@ -299,10 +299,11 @@ def process_row(index, row):
 
         order = taxonomic_info.get('order', 'Unknown')
         class_name = taxonomic_info.get('class', 'Unknown')
+        family_name = taxonomic_info.get('family', 'Unknown')
 
         # Generates FASTA and CSV output
         fasta_entry = f">{sanitize_otu_name(f'{qseqid}_{accessionID}_{taxonomic_name}_{pident:.2f}')}\n{qseq}\n"
-        csv_entry = [qseqid, accessionID, class_name, order, taxonomic_name, pident, qseq, source]
+        csv_entry = [qseqid, accessionID, class_name, order, family_name, taxonomic_name, pident, qseq, source]
 
         return fasta_entry, csv_entry
 
