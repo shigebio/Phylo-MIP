@@ -45,7 +45,7 @@
 ## How to Use Phylo-MIP
 **実行の前に**
 Phylo-MIP.pyはNCBIおよびGBIFのAPIを利用しています。[NCBI](https://blast.ncbi.nlm.nih.gov/doc/blast-help/developerinfo.html#developerinfo)と[GBIF](https://techdocs.gbif.org/en/openapi/v1/species)のAPIガイドラインを参照してください。
-可能な限り、初回実効の前に[こちらのコード](https://github.com/shigebio/MICUM/blob/main/app/MICUM.py#L21)のメールアドレスを自身のものに書き換えい。
+可能な限り、初回実効の前に[こちらのコード](https://github.com/shigebio/Phylo-MIP/blob/main/app/Phylo-MIP.py#L22)のメールアドレスを自身のものに書き換えい。
 
 NCBIのガイドラインより一部抜粋
 >- Do not contact the server more often than once every 10 seconds.
@@ -65,7 +65,7 @@ NCBIのガイドラインより一部抜粋
       phylo-mip ./paht/your_input.csv --tree --method ML --bootstrap 250
       ```
 
-   インプット用CSVの作成方法は[こちら](https://github.com/shigebio/MICUM/blob/main/README-Preparing_the_input_files.jp.md)を参照
+   インプット用CSVの作成方法は[こちら](https://github.com/shigebio/Phylo-MIP/blob/main/README-Preparing_the_input_files.jp.md)を参照
 
       <details><summary>オプション</summary>
 
@@ -103,13 +103,39 @@ NCBIのガイドラインより一部抜粋
       ```
 
 ## 出力
-### 種名の割りてられたOTUで構成されたFASTAファイル/CSVファイル
-- `--class`オプションなし
-  - `pre_filtered_{出力ファイル名}.csv`
-  - `pre_filtered_{出力ファイル名}.festa`
-- `--class`オプションあり
-  - `filtered_{出力ファイル名}.csv`
-  - `filtered_{出力ファイル名}.festa`
+```
+=== Directory Structure Verification ===
+micum_output_{実行時間}/
+  taxonomy/ # 分類情報を付与したCSV、FASTAファイル
+    taxonomic_data.csv
+    taxonomic_sequences.fasta
+  phylogeny/ # fattreeによる系統樹
+    {実行時間}_ML_phylogenetic_tree.nex # ファイルの頭には実行時のprefixが付きます
+    {実行時間}_ML_{実行時間}_ML_phylogenetic_tree.nwk
+  alignment/ # mafft、VSEARCH実施後のファイル
+    {実行時間}_haplotype_clusters.tsv # VSEARCHによるハプロタイプ同定結果TSVファイル
+    {実行時間}_haplotype_clusters.csv　# VSEARCHによるハプロタイプ同定結果CSVファイル
+    {実行時間}_clustered_sequences.fasta # VSEARCHによる同一ハプロタイプの除去後のファイル
+    {実行時間}_aligned_sequences.fasta # MAFFTによるアライメント後のファイル
+  mptp/ # mptp出力結果
+    {実行時間}_mPTP_analysis/
+      {実行時間}_mPTP_species_delimitation.txt # 割り当てられたSpeciesと各Speciesの尤度を含むTXTファイル
+      {実行時間}_mPTP_species_delimitation.svg # 樹形ファイル(SVG)
+  bptp/ # bptp出力結果
+    {実行時間}_bPTP_analysis/
+      {実行時間}_bPTP_species_delimitation.PTPhSupportPartition.txt.svg # 簡易ヒューリスティック検索(simple heuristic search)により構築された樹形ファイル(SVG)
+      {実行時間}_bPTP_species_delimitation.llh.pdf # MCMC chainのtraceロググラフ(PDF)
+      {実行時間}_bPTP_species_delimitation.PTPhSupportPartition.txt.sh.tre # 簡易ヒューリスティック検索(simple heuristic search)により構築された樹形ファイル(TREE)
+      {実行時間}_bPTP_species_delimitation.PTPMLPartition.txt # ML法により割り当てられたSpeciesと各Speciesの尤度を含むTXTファイル
+      {実行時間}_bPTP_species_delimitation.PTPMLPartition.txt.ml.tre # ML法により構築された樹形ファイル(TREE)
+      {実行時間}_bPTP_species_delimitation.PTPMLPartition.txt.png # ML法により構築された樹形ファイル(PNG)
+      {実行時間}_bPTP_species_delimitation.PTPllh.txt # MCMC chainのtraceログ
+      {実行時間}_bPTP_species_delimitation.PTPhSupportPartition.txt.png # 簡易ヒューリスティック検索(simple heuristic search)により構築された樹形ファイル(PNG)
+      {実行時間}_bPTP_species_delimitation.PTPPartitions.txt
+      {実行時間}_bPTP_species_delimitation.PTPhSupportPartition.txt # 簡易ヒューリスティック検索(simple heuristic search)により割り当てられたSpeciesと各Speciesの尤度を含むTXTファイル
+      {実行時間}_bPTP_species_delimitation.PTPMLPartition.txt.svg # ML法により構築された樹形ファイル(SVG)
+      {実行時間}_bPTP_species_delimitation.PTPPartitonSummary.txt # 各手法で分割されたSpeiceis
+```
 
 OTUにつけられる配列ごとの分類学的ステータスは、pident (localBLAST 検索での検索配列の一致率) の値によって下記ルールで割り当てられます:
 ```
@@ -118,45 +144,11 @@ pident >= 98.00 : 種名
 90.00 <= pident < 95.00 : 科名
 85.00 <= pident < 90.00 : 目名
 ```
-https://github.com/shigebio/MICUM/blob/main/app/MICUM.py#L184-L192
+https://github.com/shigebio/Phylo-MIP/blob/main/app/Phylo-MIP.py#L291-L298
 
 <b>＊注意＊
      Entrez API(NCBI)から取得したデータはNCCBIのDBの構造上、分類群情報のカラムがずれて取得される可能性がありますので、一度ファイルの分類群情報をチェックしてください
 </b>
-
-### MAFFTによるアライメント後のファイル
-  `{input/出力ファイル名}_aligned.fasta`
-
-### VSEARCHによる同一ハプロタイプの除去後のファイル
-  `{出力ファイル名}_vsearch.fasta`
-  このファイルが系統樹作成や種区分の決定解析に使用されています
-
-### bPTP解析の結果
-  <details><summary>主要なファイル</summary>
-
-    - `output_base_tree_bptp_{出力ファイル名}.txt.PTPhSupportPartition.txt`
-      - 簡易ヒューリスティック検索(simple heuristic search)による解析結果。テキスト形式。
-    - `output_base_tree_bptp_{出力ファイル名}.txt.PTPhSupportPartition.txt.png`
-      - 簡易ヒューリスティック検索(simple heuristic search)による解析結果。画像(png)形式。
-    - `output_base_tree_bptp_{出力ファイル名}.txt.PTPhSupportPartition.txt.svg`
-      - 簡易ヒューリスティック検索(simple heuristic search)による解析結果。画像(svg)形式。
-    - `output_base_tree_bptp_output.txt.PTPMLPartition.txt`
-      - ML法による解析結果。テキスト形式。
-    - `output_base_tree_bptp_output.txt.PTPMLPartition.txt.png`
-      - ML法による解析結果。画像(png)形式。
-    - `output_base_tree_bptp_output.txt.PTPMLPartition.txt.svg`
-      - ML法による解析結果。画像(svg)形式。
-
-  </details>
-
-### mPTP解析の結果
-  <details><summary>主要なファイル</summary>
-
-    - `output_base_tree_mptp_{出力ファイル名}.txt.txt`
-      - ML法による解析結果。テキスト形式。
-    - `output_base_tree_mptp_{出力ファイル名}.txt.svg`
-      - ML法によるの解析結果。画像(svg)形式。
-  </details>
 
 ---
 ## How to Use merge_data.py
@@ -168,4 +160,4 @@ https://github.com/shigebio/MICUM/blob/main/app/MICUM.py#L184-L192
 結合後のファイルは実行時のディレクトリ下に出力されます。
 
 # 使用時に感じた問題点
-→[new issue作成](https://github.com/shigebio/MICUM/issues)して記載いただけると🙏
+→[new issue作成](https://github.com/shigebio/Phylo-MIP/issues)して記載いただけると🙏
