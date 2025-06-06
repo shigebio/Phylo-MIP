@@ -46,7 +46,7 @@ args = parser.parse_args()
 input_file_path = os.path.abspath(args.input_csv)
 input_dir = os.path.dirname(input_file_path)
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-output_dir = os.path.join(input_dir, f"micum_output_{timestamp}")
+output_dir = os.path.join(input_dir, f"phylomip_output_{timestamp}")
 print(f"Output directory will be created at: {output_dir}")
 os.makedirs(output_dir, exist_ok=True)
 
@@ -776,7 +776,7 @@ if os.path.exists(output_dir):
 else:
     print(f"Error: Output directory not found at {output_dir}")
     # Search for an alternative output directory
-    alt_outputs = glob.glob(os.path.join(input_dir, "micum_output_*"))
+    alt_outputs = glob.glob(os.path.join(input_dir, "phylomip_output_*"))
     if alt_outputs:
         print(f"Found alternative output directories: {alt_outputs}")
         final_output_path = alt_outputs[-1]  # Use the latest

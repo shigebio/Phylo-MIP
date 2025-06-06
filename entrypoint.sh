@@ -6,7 +6,7 @@ echo "Working directory: $(pwd)"
 echo "Arguments: $@"
 
 # Ensure proper execution of Python scripts regardless of how they're called
-if [[ "$1" == *"MICUM.py"* ]] || [[ "$2" == *"MICUM.py"* ]]; then
+if [[ "$1" == *"Phylo-MIP.py"* ]] || [[ "$2" == *"Phylo-MIP.py"* ]]; then
     # Make sure we're using python3 to execute the script
     if [[ "$1" == "python3" ]]; then
         echo "Executing: $@"

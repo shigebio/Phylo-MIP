@@ -1,4 +1,4 @@
-# MICUM(Moleculer Identification pipeline Computational Unit Manager)
+# Phylo-MIP(Phylogeny-based Molecular Identification Pipeline)
 - [README(日本語)](README-jp.md)
 ## What`s app
 - This app is a pipeline tool that aims to perform phylogenetic analysis and species determination simply and almost automatically.
@@ -7,19 +7,19 @@
 Designed for phylogenetic analysis using environmental DNA and more ...
 
 ### What we can do
-- Create a FASTA file with OTUs including species names based on the file output by `localBLAST` or `BLAST+` (only for DBs composed of NCBI data) : <b>MICUM.py</b>
+- Create a FASTA file with OTUs including species names based on the file output by `localBLAST` or `BLAST+` (only for DBs composed of NCBI data) : <b>Phylo-MIP.py</b>
   - Sequence alignment([MAFFT](https://mafft.cbrc.jp/alignment/server/index.html))
   - Haplotype detection([VSEARCH](https://github.com/torognes/vsearch))
   - Creating a phylogenetic tree([FASTTree](https://morgannprice.github.io/fasttree/))
   - Species classification analysis([bPTP](https://species.h-its.org/), [mPTP](https://github.com/Pas-Kapli/mptp))
-- Merging the output file of Qiime2 and the output file of MICUM pipline : <b>merge_data.py</b>
+- Merging the output file of Qiime2 and the output file of Phylo-MIP pipline : <b>merge_data.py</b>
 - Confirmed that it can be run on MAcOS or LinuxOS, but it can also be run on WindowsOS using WSL.
 
 ## Installation
 1. Installing Docker
      - https://docs.docker.jp/engine/getstarted/step_one.html
-2. Download or clone MICUM
-  MICUM is available as a direct download or by cloning the repository.
+2. Download or clone Phylo-MIP
+  Phylo-MIP is available as a direct download or by cloning the repository.
     <details><summary>DL link</summary>
 
     ![image](https://github.com/user-attachments/assets/ad10015a-dbe1-4498-a751-ae2e0c42a47a)
@@ -29,12 +29,12 @@ Designed for phylogenetic analysis using environmental DNA and more ...
 
     Clone
     ```
-    git clone https://github.com/shigebio/MICUM
+    git clone https://github.com/shigebio/Phylo-MIP
     ```
 
 3. Go to DL or cloned file
     ```
-    cd /{path to MICUM}/MICUM
+    cd /{path to Phylo-MIP}/Phylo-MIP
     ```
 4. Creating a virtual environment
     ```
@@ -43,9 +43,9 @@ Designed for phylogenetic analysis using environmental DNA and more ...
     ./setup.sh
     ```
 ---
-## How to Use MICUM
+## How to Use Phylo-MIP
 **Before you run**
-MICUM.py uses NCBI and GBIF APIs. Please refer to the [NCBI](https://blast.ncbi.nlm.nih.gov/doc/blast-help/developerinfo.html#developerinfo) and [GBIF](https://techdocs.gbif.org/en/openapi/v1/species) API guidelines.
+Phylo-MIP.py uses NCBI and GBIF APIs. Please refer to the [NCBI](https://blast.ncbi.nlm.nih.gov/doc/blast-help/developerinfo.html#developerinfo) and [GBIF](https://techdocs.gbif.org/en/openapi/v1/species) API guidelines.
 Before running for the first time, as much as possible, please change the example email address in [this code](https://github.com/shigebio/MICUM/blob/main/app/MICUM.py#L21) to your own.
 
 Part of the NCBI guidelines
@@ -54,26 +54,22 @@ Part of the NCBI guidelines
 >- Use the URL parameter email and tool, so that the NCBI can contact you if there is a problem.
 >- Run scripts weekends or between 9 pm and 5 am Eastern time on weekdays if more than 50 searches will be submitted.
 ---
-1. Launch Docker Desktop or Docker Engine
-      ```
-      # If you use Docker Engine
-      service docker start
-      ```
+
 1. Executing commands
 
     **Basic commands**
       ```
-      micum {Path to Input CSV} --tree {Options}
+      phylo-mip {Path to Input CSV} --tree {Options}
       ```
     **Example**
       ```
-      micum ./path/to/your_input.csv --tree --method ML --bootstrap 250
+      phylo-mip ./path/to/your_input.csv --tree --method ML --bootstrap 250
       ```
 
    See [here](https://github.com/shigebio/MICUM/blob/main/README-Preparing_the_input_files.md) for acceptable input file formats
-  
+
       <details><summary>See Options</summary>
-      
+
         - `--top` : You can specify 1 to 10 of the top `pident` with the same `qseqid`.
           - Default: `1`
         - `--o` : Output name of the output file. If not present, the default name is applied.
@@ -100,11 +96,11 @@ Part of the NCBI guidelines
 
    **If you only want to output FASTA and CSV files**
       ```
-      python3 MICUM.py {input CSV file name} {output file name}
+      phylo-mip {input CSV file name} {output file name}
       ```
       **Example**
       ```
-      python3 MICUM.py your_data.csv output
+      phylo-mip your_data.csv output
       ```
 
 ## Outputs
@@ -167,7 +163,7 @@ This file is used for phylogenetic tree construction and species classification 
 ## How to Use merge_data
 **Basic commands**
   ```
-  merge_data -q {Qiime output file path} -m {MICUM pipeline output file path} -f {The file format you want to output: csv/tsv} -o {output file name}
+  merge_data -q {Qiime output file path} -m {Phylo-MIP pipeline output file path} -f {The file format you want to output: csv/tsv} -o {output file name}
   ```
 
 Output file name default: time plefix on executed.

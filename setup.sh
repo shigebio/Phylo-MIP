@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Universal setup script for MICUM (MacOS and Ubuntu)
+# Universal setup script for Phylo-MIP (MacOS and Ubuntu)
 
 # Detect OS
 if [ "$(uname)" == "Darwin" ]; then
@@ -28,7 +28,7 @@ else
     exit 1
 fi
 
-echo "Setting up MICUM for ${OS_TYPE}..."
+echo "Setting up Phylo-MIP for ${OS_TYPE}..."
 
 # Create directory for scripts if it doesn't exist
 mkdir -p "$SCRIPT_DIR"
@@ -40,8 +40,8 @@ if [[ ":$PATH:" != *":$SCRIPT_DIR:"* ]]; then
     export PATH="$HOME/bin:$PATH"
 fi
 
-# Create the micum script with OS-specific settings
-cat > "$SCRIPT_DIR/micum" << 'EOF'
+# Create the phylo-mip script with OS-specific settings
+cat > "$SCRIPT_DIR/phylo-mip" << 'EOF'
 #!/bin/bash
 
 # Check if we have arguments
@@ -96,8 +96,8 @@ docker run --rm -it ${PLATFORM_FLAG} \
     -v "$INPUT_DIR:/output" \
     -w /workdir \
     --user $(id -u):$(id -g) \
-    micum \
-    python3 /app/MICUM.py "/workdir/input_file" "$@"
+    phylo-mip \
+    python3 /app/Phylo-MIP.py "/workdir/input_file" "$@"
 
 # Check the Docker exit status
 DOCKER_STATUS=$?
@@ -107,7 +107,7 @@ fi
 
 # Copy all output files from temp dir to original directory
 echo "Copying output files back to original directory"
-find "$TEMP_DIR" -type d -name "micum_output_*" | while read dir; do
+find "$TEMP_DIR" -type d -name "pm_output_*" | while read dir; do
     BASENAME=$(basename "$dir")
     DEST="$INPUT_DIR/$BASENAME"
     echo "Copying $dir to $DEST"
@@ -131,13 +131,13 @@ cat > "$SCRIPT_DIR/merge_data" << 'EOF'
 # Check if we have arguments
 if [ $# -lt 6 ]; then
     echo "Error: Insufficient arguments provided"
-    echo "Usage: $0 -q <qiime_file> -m <micum_file> -f <format> [-o <output_file>] [-d]"
+    echo "Usage: $0 -q <qiime_file> -m <pm_file> -f <format> [-o <output_file>] [-d]"
     exit 1
 fi
 
 # Parse arguments to find file paths
 QIIME_FILE=""
-MICUM_FILE=""
+PM_FILE=""
 FORMAT=""
 OUTPUT_FILE=""
 DEBUG=""
@@ -154,7 +154,7 @@ while [ $index -le $# ]; do
         index=$((index + 2))
     elif [ "$current_arg" = "-m" ]; then
         next_index=$((index + 1))
-        MICUM_FILE=${!next_index}
+        PM_FILE=${!next_index}
         index=$((index + 2))
     elif [ "$current_arg" = "-f" ]; then
         next_index=$((index + 1))
@@ -174,8 +174,8 @@ while [ $index -le $# ]; do
 done
 
 # Check if required files were specified
-if [ -z "$QIIME_FILE" ] || [ -z "$MICUM_FILE" ] || [ -z "$FORMAT" ]; then
-    echo "Error: QIIME file (-q), MICUM file (-m), and format (-f) must be specified"
+if [ -z "$QIIME_FILE" ] || [ -z "$PM_FILE" ] || [ -z "$FORMAT" ]; then
+    echo "Error: QIIME file (-q), Phylo-MIP file (-m), and format (-f) must be specified"
     exit 1
 fi
 
@@ -183,11 +183,11 @@ fi
 if [ "$(uname)" == "Darwin" ]; then
     # macOS approach - don't use realpath which may have different options on BSD
     QIIME_FILE=$(cd "$(dirname "$QIIME_FILE")" && pwd)/$(basename "$QIIME_FILE")
-    MICUM_FILE=$(cd "$(dirname "$MICUM_FILE")" && pwd)/$(basename "$MICUM_FILE")
+    PM_FILE=$(cd "$(dirname "$PM_FILE")" && pwd)/$(basename "$PM_FILE")
 else
     # Linux approach
     QIIME_FILE=$(realpath "$QIIME_FILE")
-    MICUM_FILE=$(realpath "$MICUM_FILE")
+    PM_FILE=$(realpath "$PM_FILE")
 fi
 
 # Check if files exist
@@ -196,15 +196,15 @@ if [ ! -f "$QIIME_FILE" ]; then
     exit 1
 fi
 
-if [ ! -f "$MICUM_FILE" ]; then
-    echo "Error: MICUM file not found: $MICUM_FILE"
+if [ ! -f "$PM_FILE" ]; then
+    echo "Error: Phylo-MIP file not found: $PM_FILE"
     exit 1
 fi
 
 # Get current directory and file names
 CURRENT_DIR=$(pwd)
 QIIME_BASENAME=$(basename "$QIIME_FILE")
-MICUM_BASENAME=$(basename "$MICUM_FILE")
+PM_BASENAME=$(basename "$PM_FILE")
 
 # Create a temporary directory
 TEMP_DIR=$(mktemp -d)
@@ -212,7 +212,7 @@ echo "Creating temporary directory: $TEMP_DIR"
 
 # Copy files to temp directory
 cp "$QIIME_FILE" "$TEMP_DIR/qiime_file"
-cp "$MICUM_FILE" "$TEMP_DIR/micum_file"
+cp "$PM_FILE" "$TEMP_DIR/pm_file"
 
 # Platform detection
 if [ "$(uname)" == "Darwin" ]; then
@@ -238,8 +238,8 @@ docker run --rm -it ${PLATFORM_FLAG} \
     -v "$TEMP_DIR:/workdir" \
     -w /workdir \
     --user $(id -u):$(id -g) \
-    micum \
-    python3 /app/merge_data.py -q "/workdir/qiime_file" -m "/workdir/micum_file" -f "$FORMAT" $OUTPUT_ARGS $DEBUG $OTHER_ARGS
+    phylo-mip \
+    python3 /app/merge_data.py -q "/workdir/qiime_file" -m "/workdir/pm_file" -f "$FORMAT" $OUTPUT_ARGS $DEBUG $OTHER_ARGS
 
 # Check the Docker exit status
 DOCKER_STATUS=$?
@@ -288,7 +288,7 @@ fi
 EOF
 
 # Make scripts executable
-chmod +x "$SCRIPT_DIR/micum"
+chmod +x "$SCRIPT_DIR/phylo-mip"
 chmod +x "$SCRIPT_DIR/merge_data"
 
 # Build Docker image with platform awareness
@@ -297,18 +297,18 @@ if [ "$OS_TYPE" == "macos" ]; then
     # macOS: Check for ARM vs Intel
     if [ "$(uname -m)" == "arm64" ]; then
         echo "Building for ARM64 MacOS (M1/M2/M3/M4)..."
-        docker build --platform linux/amd64 -t micum .
+        docker build --platform linux/amd64 -t phylo-mip .
     else
         echo "Building for Intel MacOS..."
-        docker build -t micum .
+        docker build -t phylo-mip .
     fi
 else
     # Linux
     echo "Building for Linux..."
-    docker build -t micum .
+    docker build -t phylo-mip .
 fi
 
 echo "Setup complete!"
-echo "You can now use 'micum' and 'merge_data' commands."
+echo "You can now use 'phylo-mip' and 'merge_data' commands."
 echo "If commands are not found, please restart your terminal or run:"
 echo "source $PROFILE"

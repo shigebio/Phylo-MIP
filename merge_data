@@ -3,13 +3,13 @@
 # Check if we have arguments
 if [ $# -lt 6 ]; then
     echo "Error: Insufficient arguments provided"
-    echo "Usage: $0 -q <qiime_file> -m <micum_file> -f <format> [-o <output_file>] [-d]"
+    echo "Usage: $0 -q <qiime_file> -m <Phylo-MIP_file> -f <format> [-o <output_file>] [-d]"
     exit 1
 fi
 
 # Parse arguments to find file paths
 QIIME_FILE=""
-MICUM_FILE=""
+PM_FILE=""
 FORMAT=""
 OUTPUT_FILE=""
 DEBUG=""
@@ -26,7 +26,7 @@ while [ $index -le $# ]; do
         index=$((index + 2))
     elif [ "$current_arg" = "-m" ]; then
         next_index=$((index + 1))
-        MICUM_FILE=${!next_index}
+        PM_FILE=${!next_index}
         index=$((index + 2))
     elif [ "$current_arg" = "-f" ]; then
         next_index=$((index + 1))
@@ -46,8 +46,8 @@ while [ $index -le $# ]; do
 done
 
 # Check if required files were specified
-if [ -z "$QIIME_FILE" ] || [ -z "$MICUM_FILE" ] || [ -z "$FORMAT" ]; then
-    echo "Error: QIIME file (-q), MICUM file (-m), and format (-f) must be specified"
+if [ -z "$QIIME_FILE" ] || [ -z "$PM_FILE" ] || [ -z "$FORMAT" ]; then
+    echo "Error: QIIME file (-q), Phylo-MIP file (-m), and format (-f) must be specified"
     exit 1
 fi
 
@@ -56,16 +56,16 @@ case "$(uname -s)" in
     Darwin)
         # macOS approach
         QIIME_FILE=$(cd "$(dirname "$QIIME_FILE")" && pwd)/$(basename "$QIIME_FILE")
-        MICUM_FILE=$(cd "$(dirname "$MICUM_FILE")" && pwd)/$(basename "$MICUM_FILE")
+        PM_FILE=$(cd "$(dirname "$PM_FILE")" && pwd)/$(basename "$PM_FILE")
         ;;
     *)
         # Linux/Windows WSL approach
         if command -v realpath &> /dev/null; then
             QIIME_FILE=$(realpath "$QIIME_FILE")
-            MICUM_FILE=$(realpath "$MICUM_FILE")
+            PM_FILE=$(realpath "$PM_FILE")
         else
             QIIME_FILE=$(cd "$(dirname "$QIIME_FILE")" && pwd)/$(basename "$QIIME_FILE")
-            MICUM_FILE=$(cd "$(dirname "$MICUM_FILE")" && pwd)/$(basename "$MICUM_FILE")
+            PM_FILE=$(cd "$(dirname "$PM_FILE")" && pwd)/$(basename "$PM_FILE")
         fi
         ;;
 esac
@@ -76,15 +76,15 @@ if [ ! -f "$QIIME_FILE" ]; then
     exit 1
 fi
 
-if [ ! -f "$MICUM_FILE" ]; then
-    echo "Error: MICUM file not found: $MICUM_FILE"
+if [ ! -f "$PM_FILE" ]; then
+    echo "Error: Phylo-MIP file not found: $PM_FILE"
     exit 1
 fi
 
 # Get current directory and file names
 CURRENT_DIR=$(pwd)
 QIIME_BASENAME=$(basename "$QIIME_FILE")
-MICUM_BASENAME=$(basename "$MICUM_FILE")
+PM_BASENAME=$(basename "$PM_FILE")
 
 # Create a temporary directory
 TEMP_DIR=$(mktemp -d)
@@ -92,7 +92,7 @@ echo "Creating temporary directory: $TEMP_DIR"
 
 # Copy files to temp directory
 cp "$QIIME_FILE" "$TEMP_DIR/qiime_file"
-cp "$MICUM_FILE" "$TEMP_DIR/micum_file"
+cp "$PM_FILE" "$TEMP_DIR/pm_file"
 
 # Platform detection for Docker
 case "$(uname -s)" in
@@ -127,8 +127,8 @@ docker run --rm -it ${PLATFORM_FLAG} \
     -v "$TEMP_DIR:/workdir" \
     -w /workdir \
     ${USER_FLAG} \
-    micum \
-    python3 /app/merge_data.py -q "/workdir/qiime_file" -m "/workdir/micum_file" -f "$FORMAT" $OUTPUT_ARGS $DEBUG $OTHER_ARGS
+    phylo-mip \
+    python3 /app/merge_data.py -q "/workdir/qiime_file" -m "/workdir/pm_file" -f "$FORMAT" $OUTPUT_ARGS $DEBUG $OTHER_ARGS
 
 # Check the Docker exit status
 DOCKER_STATUS=$?

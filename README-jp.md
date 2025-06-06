@@ -1,4 +1,4 @@
-# MICUM(Moleculer Identification pipeline Computational Unit Manager)
+# Phylo-MIP(Phylogeny-based Molecular Identification Pipeline)
 ## What`s app
 - 系統解析～種の判定を簡易的かつほぼ自動的に行うことを目標に作成したパイプラインツールです
 - 仮想環境の構成にDockerを使用しており、使用者のOSや環境に依存しません
@@ -11,13 +11,13 @@
   - ハプロタイプの検出([VSEARCH](https://github.com/torognes/vsearch))
   - 系統樹の作成([FASTTree](https://morgannprice.github.io/fasttree/))
   - 種の区分決定解析([bPTP](https://species.h-its.org/), [mPTP](https://github.com/Pas-Kapli/mptp))
-- Qiime2 の出力ファイルと MICUM パイプラインの出力ファイルのマージ: <b>merge_data.py</b>
+- Qiime2 の出力ファイルと Phylo-MIP パイプラインの出力ファイルのマージ: <b>merge_data.py</b>
 - MAcOSまたはLinuxOSで実行できることを確認済みですが、WindowsOSでもWSLを利用して実行可能です。
 
 ## Installation
 1. Dockerの導入
      - https://docs.docker.jp/engine/getstarted/step_one.html
-1. MICUMをDL or クローン
+1. Phylo-MIP or クローン
     <details><summary>DLリンク</summary>
 
     ![image](https://github.com/user-attachments/assets/ad10015a-dbe1-4498-a751-ae2e0c42a47a)
@@ -27,11 +27,11 @@
 
     Git Clone
     ```
-    git clone https://github.com/shigebio/MICUM
+    git clone https://github.com/shigebio/Phylo-MIP
     ```
 1. DL or Cloneしてきたファイルのディレクトリへ移動
     ```
-    cd /{path to MICUM}/MICUM
+    cd /{path to Phylo-MIP}/Phylo-MIP
     ```
 
 1. 仮想環境の構築
@@ -42,9 +42,9 @@
     ```
 
 ---
-## How to Use MICUM
+## How to Use Phylo-MIP
 **実行の前に**
-MICUM.pyはNCBIおよびGBIFのAPIを利用しています。[NCBI](https://blast.ncbi.nlm.nih.gov/doc/blast-help/developerinfo.html#developerinfo)と[GBIF](https://techdocs.gbif.org/en/openapi/v1/species)のAPIガイドラインを参照してください。
+Phylo-MIP.pyはNCBIおよびGBIFのAPIを利用しています。[NCBI](https://blast.ncbi.nlm.nih.gov/doc/blast-help/developerinfo.html#developerinfo)と[GBIF](https://techdocs.gbif.org/en/openapi/v1/species)のAPIガイドラインを参照してください。
 可能な限り、初回実効の前に[こちらのコード](https://github.com/shigebio/MICUM/blob/main/app/MICUM.py#L21)のメールアドレスを自身のものに書き換えい。
 
 NCBIのガイドラインより一部抜粋
@@ -54,22 +54,15 @@ NCBIのガイドラインより一部抜粋
 >- Run scripts weekends or between 9 pm and 5 am Eastern time on weekdays if more than 50 searches will be submitted.
 ---
 
-1. 仮想環境の構築
-  Docker Desktopを起動
-    ```
-    # Docker Engineを使用する場合
-    service docker start
-    ```
-
 1. コマンドの実行
 
     **基本のコマンド**
       ```
-      micum {入力CSVファイルのパス} --tree {オプション}
+      phylo-mip {入力CSVファイルのパス} --tree {オプション}
       ```
     **例**
       ```
-      micum ./paht/your_input.csv --tree --method ML --bootstrap 250
+      phylo-mip ./paht/your_input.csv --tree --method ML --bootstrap 250
       ```
 
    インプット用CSVの作成方法は[こちら](https://github.com/shigebio/MICUM/blob/main/README-Preparing_the_input_files.jp.md)を参照
@@ -102,11 +95,11 @@ NCBIのガイドラインより一部抜粋
 
    **FASTAファイルとCSVファイル出力だけしたい場合**
       ```
-      python3 MICUM.py {入力CSVファイル名} {出力ファイル名}
+      phylo-mip {入力CSVファイル名} {出力ファイル名}
       ```
     **例**
       ```
-      micum ./path/your_data.csv output_mame
+      phylo-mip ./path/your_data.csv output_mame
       ```
 
 ## 出力
@@ -169,7 +162,7 @@ https://github.com/shigebio/MICUM/blob/main/app/MICUM.py#L184-L192
 ## How to Use merge_data.py
 **コマンドの実行**
     ```
-    merge_data -q {Qiimeの出力ファイルのパス} -m {MICUM pipelineの出力ファイルのパス} -f {任意の主力形式: csv/tsv} -o  {出力ファイル名}
+    merge_data -q {Qiimeの出力ファイルのパス} -m {Phylo-MIP pipelineの出力ファイルのパス} -f {任意の主力形式: csv/tsv} -o  {出力ファイル名}
     ```
 出力ファイル名のデフォルト: 実行時間のprefix
 結合後のファイルは実行時のディレクトリ下に出力されます。
