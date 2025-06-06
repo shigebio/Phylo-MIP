@@ -106,36 +106,36 @@ Part of the NCBI guidelines
 ## Outputs
 ```
 === Directory Structure Verification ===
-micum_output_{実行時刻}/
-  taxonomy/ # 分類情報を付与したCSV、FASTAファイル
+micum_output_{execution time}/
+  taxonomy/ # CSV, FASTA files with taxonomic information
     taxonomic_data.csv
     taxonomic_sequences.fasta
-  phylogeny/ # fattreeによる系統樹
-    {実行時間}_ML_phylogenetic_tree.nex # ファイルの頭には実行時のprefixが付きます
-    {実行時間}_ML_{実行時間}_ML_phylogenetic_tree.nwk
-  alignment/ # mafft、VSEARCH実施後のファイル
-    {実行時間}_haplotype_clusters.tsv # VSEARCHによるハプロタイプ同定結果TSVファイル
-    {実行時間}_haplotype_clusters.csv　# VSEARCHによるハプロタイプ同定結果CSVファイル
-    {実行時間}_clustered_sequences.fasta # VSEARCHによる同一ハプロタイプの除去後のファイル
-    {実行時間}_aligned_sequences.fasta # MAFFTによるアライメント後のファイル
-  mptp/ # mptp出力結果
-    {実行時間}_mPTP_analysis/
-      {実行時間}_mPTP_species_delimitation.txt # 割り当てられたSpeciesと各Speciesの尤度を含むTXTファイル
-      {実行時間}_mPTP_species_delimitation.svg # 樹形ファイル(SVG)
-  bptp/ # bptp出力結果
-    {実行時間}_bPTP_analysis/
-      {実行時間}_bPTP_species_delimitation.PTPhSupportPartition.txt.svg # 簡易ヒューリスティック検索(simple heuristic search)により構築された樹形ファイル(SVG)
-      {実行時間}_bPTP_species_delimitation.llh.pdf # MCMC chainのtraceロググラフ(PDF)
-      {実行時間}_bPTP_species_delimitation.PTPhSupportPartition.txt.sh.tre # 簡易ヒューリスティック検索(simple heuristic search)により構築された樹形ファイル(TREE)
-      {実行時間}_bPTP_species_delimitation.PTPMLPartition.txt # ML法により割り当てられたSpeciesと各Speciesの尤度を含むTXTファイル
-      {実行時間}_bPTP_species_delimitation.PTPMLPartition.txt.ml.tre # ML法により構築された樹形ファイル(TREE)
-      {実行時間}_bPTP_species_delimitation.PTPMLPartition.txt.png # ML法により構築された樹形ファイル(PNG)
-      {実行時間}_bPTP_species_delimitation.PTPllh.txt # MCMC chainのtraceログ
-      {実行時間}_bPTP_species_delimitation.PTPhSupportPartition.txt.png # 簡易ヒューリスティック検索(simple heuristic search)により構築された樹形ファイル(PNG)
-      {実行時間}_bPTP_species_delimitation.PTPPartitions.txt
-      {実行時間}_bPTP_species_delimitation.PTPhSupportPartition.txt # 簡易ヒューリスティック検索(simple heuristic search)により割り当てられたSpeciesと各Speciesの尤度を含むTXTファイル
-      {実行時間}_bPTP_species_delimitation.PTPMLPartition.txt.svg # ML法により構築された樹形ファイル(SVG)
-      {実行時間}_bPTP_species_delimitation.PTPPartitonSummary.txt # 各手法で分割されたSpeiceis
+  phylogeny/ # Phylogenetic tree by fattree
+    {execution time}_ML_phylogenetic_tree.nex # The file will be prefixed with the execution time
+    {execution time}_ML_{execution time}_ML_phylogenetic_tree.nwk
+  alignment/ # File after mafft and VSEARCH
+    {execution time}_haplotype_clusters.tsv # TSV file of haplotype identification results by VSEARCH
+    {execution time}_haplotype_clusters.csv　# CSV file of haplotype identification results by VSEARCH
+    {execution time}_clustered_sequences.fasta # File after removal of identical haplotypes by VSEARCH
+    {execution time}_aligned_sequences.fasta # File after alignment by MAFFT
+  mptp/ # mptp output result
+    {execution time}_mPTP_analysis/
+    {execution time}_mPTP_species_delimitation.txt # TXT file containing assigned species and likelihood of each species
+    {execution time}_mPTP_species_delimitation.svg # Tree file (SVG)
+  bptp/ # bptp output result
+    {execution time}_bPTP_analysis/
+    {execution time}_bPTP_species_delimitation.PTPhSupportPartition.txt.svg # Tree file (SVG) constructed by simple heuristic search
+    {execution time}_bPTP_species_delimitation.llh.pdf # Trace log graph of MCMC chain (PDF)
+    {execution time}_bPTP_species_delimitation.PTPhSupportPartition.txt.sh.tre # Tree file (TREE) constructed by simple heuristic search
+    {execution time}_bPTP_species_delimitation.PTPMLPartition.txt # TXT file containing species assigned by ML method and likelihood of each species
+    {execution time}_bPTP_species_delimitation.PTPMLPartition.txt.ml.tre # Tree file (TREE) constructed by ML method
+    {execution time}_bPTP_species_delimitation.PTPMLPartition.txt.png # Tree file (PNG) constructed by ML method
+    {execution time}_bPTP_species_delimitation.PTPllh.txt # MCMC chain trace log
+    {execution time}_bPTP_species_delimitation.PTPhSupportPartition.txt.png # Tree file (PNG) constructed by simple heuristic search
+    {execution time}_bPTP_species_delimitation.PTPPartitions.txt
+    {execution time}_bPTP_species_delimitation.PTPhSupportPartition.txt # TXT file containing species assigned by simple heuristic search and likelihood of each species
+    {execution time}_bPTP_species_delimitation.PTPMLPartition.txt.svg # Tree file (SVG) constructed by ML method
+    {execution time}_bPTP_species_delimitation.PTPPartitonSummary.txt # Species divided by each method
 ```
 
 The taxonomic status of sequences assigned to an OTU is assigned according to the value of pident (match rate of search sequence in localBLAST search) as follows:
