@@ -46,7 +46,7 @@ Designed for phylogenetic analysis using environmental DNA and more ...
 ## How to Use Phylo-MIP
 **Before you run**
 Phylo-MIP.py uses NCBI and GBIF APIs. Please refer to the [NCBI](https://blast.ncbi.nlm.nih.gov/doc/blast-help/developerinfo.html#developerinfo) and [GBIF](https://techdocs.gbif.org/en/openapi/v1/species) API guidelines.
-Before running for the first time, as much as possible, please change the example email address in [this code](https://github.com/shigebio/MICUM/blob/main/app/MICUM.py#L21) to your own.
+Before running for the first time, as much as possible, please change the example email address in [this code](https://github.com/shigebio/Phylo-MIP/blob/main/app/Phylo-MIP.py#L22) to your own.
 
 Part of the NCBI guidelines
 >- Do not contact the server more often than once every 10 seconds.
@@ -66,7 +66,7 @@ Part of the NCBI guidelines
       phylo-mip ./path/to/your_input.csv --tree --method ML --bootstrap 250
       ```
 
-   See [here](https://github.com/shigebio/MICUM/blob/main/README-Preparing_the_input_files.md) for acceptable input file formats
+   See [here](https://github.com/shigebio/Phylo-MIP/blob/main/README-Preparing_the_input_files.md) for acceptable input file formats
 
       <details><summary>See Options</summary>
 
@@ -104,13 +104,39 @@ Part of the NCBI guidelines
       ```
 
 ## Outputs
-### FASTA file/CSV file of OTUs with assigned species names
-- Without the `--class` option
-  - `pre_filtered_{output file name}.csv`
-  - `pre_filtered_{output file name}.festa`
-- With the `--class` option
-  - `filtered_{output file name}.csv`
-  - `filtered_{output file name}.festa`
+```
+=== Directory Structure Verification ===
+micum_output_{実行時刻}/
+  taxonomy/ # 分類情報を付与したCSV、FASTAファイル
+    taxonomic_data.csv
+    taxonomic_sequences.fasta
+  phylogeny/ # fattreeによる系統樹
+    {実行時間}_ML_phylogenetic_tree.nex # ファイルの頭には実行時のprefixが付きます
+    {実行時間}_ML_{実行時間}_ML_phylogenetic_tree.nwk
+  alignment/ # mafft、VSEARCH実施後のファイル
+    {実行時間}_haplotype_clusters.tsv # VSEARCHによるハプロタイプ同定結果TSVファイル
+    {実行時間}_haplotype_clusters.csv　# VSEARCHによるハプロタイプ同定結果CSVファイル
+    {実行時間}_clustered_sequences.fasta # VSEARCHによる同一ハプロタイプの除去後のファイル
+    {実行時間}_aligned_sequences.fasta # MAFFTによるアライメント後のファイル
+  mptp/ # mptp出力結果
+    {実行時間}_mPTP_analysis/
+      {実行時間}_mPTP_species_delimitation.txt # 割り当てられたSpeciesと各Speciesの尤度を含むTXTファイル
+      {実行時間}_mPTP_species_delimitation.svg # 樹形ファイル(SVG)
+  bptp/ # bptp出力結果
+    {実行時間}_bPTP_analysis/
+      {実行時間}_bPTP_species_delimitation.PTPhSupportPartition.txt.svg # 簡易ヒューリスティック検索(simple heuristic search)により構築された樹形ファイル(SVG)
+      {実行時間}_bPTP_species_delimitation.llh.pdf # MCMC chainのtraceロググラフ(PDF)
+      {実行時間}_bPTP_species_delimitation.PTPhSupportPartition.txt.sh.tre # 簡易ヒューリスティック検索(simple heuristic search)により構築された樹形ファイル(TREE)
+      {実行時間}_bPTP_species_delimitation.PTPMLPartition.txt # ML法により割り当てられたSpeciesと各Speciesの尤度を含むTXTファイル
+      {実行時間}_bPTP_species_delimitation.PTPMLPartition.txt.ml.tre # ML法により構築された樹形ファイル(TREE)
+      {実行時間}_bPTP_species_delimitation.PTPMLPartition.txt.png # ML法により構築された樹形ファイル(PNG)
+      {実行時間}_bPTP_species_delimitation.PTPllh.txt # MCMC chainのtraceログ
+      {実行時間}_bPTP_species_delimitation.PTPhSupportPartition.txt.png # 簡易ヒューリスティック検索(simple heuristic search)により構築された樹形ファイル(PNG)
+      {実行時間}_bPTP_species_delimitation.PTPPartitions.txt
+      {実行時間}_bPTP_species_delimitation.PTPhSupportPartition.txt # 簡易ヒューリスティック検索(simple heuristic search)により割り当てられたSpeciesと各Speciesの尤度を含むTXTファイル
+      {実行時間}_bPTP_species_delimitation.PTPMLPartition.txt.svg # ML法により構築された樹形ファイル(SVG)
+      {実行時間}_bPTP_species_delimitation.PTPPartitonSummary.txt # 各手法で分割されたSpeiceis
+```
 
 The taxonomic status of sequences assigned to an OTU is assigned according to the value of pident (match rate of search sequence in localBLAST search) as follows:
 ```
@@ -119,45 +145,11 @@ pident >= 98.00 : Species name
 90.00 <= pident < 95.00 : Family name
 85.00 <= pident < 90.00 : Order name
 ```
-code: https://github.com/shigebio/MICUM/blob/main/app/MICUM.py#L184-L192
+code: https://github.com/shigebio/Phylo-MIP/blob/main/app/Phylo-MIP.py#L291-L298
 
 <b>＊CAUTION＊
      Due to the structure of the NCBI database, the taxon information columns may be out of sync when retrieved from the Entrez API (NCBI). Please check the taxon information in the file.
 </b>
-
-### MAFFT aligned file
-`{input/output file name}_aligned.fasta`
-
-### File after removal of identical haplotypes by VSEARCH
-`{output file name}_vsearch.fasta`
-This file is used for phylogenetic tree construction and species classification analysis.
-
-### Results of bPTP analysis
-  <details><summary>A file containing the main results</summary>
-
-    - `output_base_tree_bptp_{output file name}.txt.PTPhSupportPartition.txt`
-      - Analysis results by simple heuristic search. Text format.
-    - `output_base_tree_bptp_{output file name}.txt.PTPhSupportPartition.txt.png`
-      - Analysis results by simple heuristic search. Image (png) format.
-    - `output_base_tree_bptp_{output file name}.txt.PTPhSupportPartition.txt.svg`
-      - Analysis results by simple heuristic search. Image (svg) format.
-    - `output_base_tree_bptp_output.txt.PTPMLPartition.txt`
-      - Analysis results using the ML method. Text format.
-    - `output_base_tree_bptp_output.txt.PTPMLPartition.txt.png`
-      - Analysis results using the ML method. Image (png) format.
-    - `output_base_tree_bptp_output.txt.PTPMLPartition.txt.svg`
-      - Analysis results using the ML method. Image (svg) format.
-
-  </details>
-
-### Results of mPTP analysis
-  <details><summary>A file containing the main results</summary>
-
-    - `output_base_tree_mptp_{output file name}.txt.txt`
-      - Analysis results using the ML method. Text format.
-    - `output_base_tree_mptp_{output file name}.txt.svg`
-      - Analysis results using the ML method. Image (svg) format.
-  </details>
 
 ---
 ## How to Use merge_data
@@ -171,4 +163,4 @@ Output file name default: time plefix on executed.
 The merged file will be output to woking directory.
 
 # The problems you have experienced
-→Please [create a new issue](https://github.com/shigebio/MICUM/issues) and include the details🙏
+→Please [create a new issue](https://github.com/shigebio/Phylo-MIP/issues) and include the details🙏
