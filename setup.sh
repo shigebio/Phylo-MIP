@@ -1,6 +1,14 @@
 #!/bin/bash
 
 # Universal setup script for Phylo-MIP (MacOS and Ubuntu)
+# Usage: ./setup.sh [--update]
+# --update: Force update existing scripts
+
+UPDATE_MODE=false
+if [[ "$1" == "--update" ]]; then
+    UPDATE_MODE=true
+    echo "Update mode enabled - existing scripts will be overwritten"
+fi
 
 # Detect OS
 if [ "$(uname)" == "Darwin" ]; then
@@ -40,8 +48,18 @@ if [[ ":$PATH:" != *":$SCRIPT_DIR:"* ]]; then
     export PATH="$HOME/bin:$PATH"
 fi
 
-# Create the phylo-mip script with OS-specific settings
-cat > "$SCRIPT_DIR/phylo-mip" << 'EOF'
+# Check if phylo-mip script exists and handle accordingly
+if [[ -f "$SCRIPT_DIR/phylo-mip" ]] && [[ "$UPDATE_MODE" == false ]]; then
+    echo "phylo-mip script already exists. Use --update flag to overwrite."
+    echo "Skipping phylo-mip script creation."
+else
+    if [[ -f "$SCRIPT_DIR/phylo-mip" ]] && [[ "$UPDATE_MODE" == true ]]; then
+        echo "Backing up existing phylo-mip script..."
+        cp "$SCRIPT_DIR/phylo-mip" "$SCRIPT_DIR/phylo-mip.backup.$(date +%Y%m%d_%H%M%S)"
+    fi
+
+    echo "Creating/updating phylo-mip script..."
+    cat > "$SCRIPT_DIR/phylo-mip" << 'EOF'
 #!/bin/bash
 
 # Check if we have arguments
@@ -106,8 +124,8 @@ if [ $DOCKER_STATUS -ne 0 ]; then
 fi
 
 # Copy all output files from temp dir to original directory
-echo "Copying output files back to original directory"
-find "$TEMP_DIR" -type d -name "pm_output_*" | while read dir; do
+echo "Copying phylomip_output_* output files back to original directory"
+find "$TEMP_DIR" -type d -name "phylomip_output_*" | while read dir; do
     BASENAME=$(basename "$dir")
     DEST="$INPUT_DIR/$BASENAME"
     echo "Copying $dir to $DEST"
@@ -123,15 +141,26 @@ fi
 
 echo "Process complete. Output files saved to: $INPUT_DIR"
 EOF
+fi
 
-# Create the merge_data script with similar OS-specific settings
-cat > "$SCRIPT_DIR/merge_data" << 'EOF'
+# Check if merge_data script exists and handle accordingly
+if [[ -f "$SCRIPT_DIR/merge_data" ]] && [[ "$UPDATE_MODE" == false ]]; then
+    echo "merge_data script already exists. Use --update flag to overwrite."
+    echo "Skipping merge_data script creation."
+else
+    if [[ -f "$SCRIPT_DIR/merge_data" ]] && [[ "$UPDATE_MODE" == true ]]; then
+        echo "Backing up existing merge_data script..."
+        cp "$SCRIPT_DIR/merge_data" "$SCRIPT_DIR/merge_data.backup.$(date +%Y%m%d_%H%M%S)"
+    fi
+
+    echo "Creating/updating merge_data script..."
+    cat > "$SCRIPT_DIR/merge_data" << 'EOF'
 #!/bin/bash
 
 # Check if we have arguments
 if [ $# -lt 6 ]; then
     echo "Error: Insufficient arguments provided"
-    echo "Usage: $0 -q <qiime_file> -m <pm_file> -f <format> [-o <output_file>] [-d]"
+    echo "Usage: $0 -q <qiime_file> -m <Phylo-MIP_file> -f <format> [-o <output_file>] [-d]"
     exit 1
 fi
 
@@ -286,10 +315,11 @@ else
     echo "WARNING: No output files were found! Check for errors in the processing."
 fi
 EOF
+fi
 
 # Make scripts executable
-chmod +x "$SCRIPT_DIR/phylo-mip"
-chmod +x "$SCRIPT_DIR/merge_data"
+chmod +x "$SCRIPT_DIR/phylo-mip" 2>/dev/null || true
+chmod +x "$SCRIPT_DIR/merge_data" 2>/dev/null || true
 
 # Build Docker image with platform awareness
 echo "Building Docker image..."
@@ -310,5 +340,8 @@ fi
 
 echo "Setup complete!"
 echo "You can now use 'phylo-mip' and 'merge_data' commands."
+if [[ "$UPDATE_MODE" == true ]]; then
+    echo "Scripts have been updated. Backup files created with timestamp."
+fi
 echo "If commands are not found, please restart your terminal or run:"
 echo "source $PROFILE"
