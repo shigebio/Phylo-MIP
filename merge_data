@@ -3,7 +3,7 @@
 # Check if we have arguments
 if [ $# -lt 6 ]; then
     echo "Error: Insufficient arguments provided"
-    echo "Usage: $0 -q <qiime_file> -m <Phylo-MIP_file> -f <format> [-o <output_file>] [-d]"
+    echo "Usage: $0 -q <qiime_file> -p <Phylo-MIP_file> -f <format> [-o <output_file>] [-d]"
     exit 1
 fi
 
@@ -24,7 +24,7 @@ while [ $index -le $# ]; do
         next_index=$((index + 1))
         QIIME_FILE=${!next_index}
         index=$((index + 2))
-    elif [ "$current_arg" = "-m" ]; then
+    elif [ "$current_arg" = "-p" ]; then
         next_index=$((index + 1))
         PM_FILE=${!next_index}
         index=$((index + 2))
