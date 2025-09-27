@@ -160,7 +160,7 @@ else
 # Check if we have arguments
 if [ $# -lt 6 ]; then
     echo "Error: Insufficient arguments provided"
-    echo "Usage: $0 -q <qiime_file> -m <Phylo-MIP_file> -f <format> [-o <output_file>] [-d]"
+    echo "Usage: $0 -q <qiime_file> -p <Phylo-MIP_file> -f <format> [-o <output_file>] [-d]"
     exit 1
 fi
 
@@ -181,7 +181,7 @@ while [ $index -le $# ]; do
         next_index=$((index + 1))
         QIIME_FILE=${!next_index}
         index=$((index + 2))
-    elif [ "$current_arg" = "-m" ]; then
+    elif [ "$current_arg" = "-p" ]; then
         next_index=$((index + 1))
         PM_FILE=${!next_index}
         index=$((index + 2))
@@ -204,7 +204,7 @@ done
 
 # Check if required files were specified
 if [ -z "$QIIME_FILE" ] || [ -z "$PM_FILE" ] || [ -z "$FORMAT" ]; then
-    echo "Error: QIIME file (-q), Phylo-MIP file (-m), and format (-f) must be specified"
+    echo "Error: QIIME file (-q), Phylo-MIP file (-p), and format (-f) must be specified"
     exit 1
 fi
 
@@ -268,7 +268,7 @@ docker run --rm -it ${PLATFORM_FLAG} \
     -w /workdir \
     --user $(id -u):$(id -g) \
     phylo-mip \
-    python3 /app/merge_data.py -q "/workdir/qiime_file" -m "/workdir/pm_file" -f "$FORMAT" $OUTPUT_ARGS $DEBUG $OTHER_ARGS
+    python3 /app/merge_data.py -q "/workdir/qiime_file" -p "/workdir/pm_file" -f "$FORMAT" $OUTPUT_ARGS $DEBUG $OTHER_ARGS
 
 # Check the Docker exit status
 DOCKER_STATUS=$?
