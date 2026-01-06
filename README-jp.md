@@ -159,5 +159,14 @@ https://github.com/shigebio/Phylo-MIP/blob/main/app/Phylo-MIP.py#L291-L298
 出力ファイル名のデフォルト: 実行時間のprefix
 結合後のファイルは実行時のディレクトリ下に出力されます。
 
+
+# 引用
+個人的な使用の場合はお気兼ねなくご使用ください。出版物の発行に際して、このパイプラインを研究活動などにご使用になられた場合は以下を引用いただけますと幸いです:
+
+**Phylo-MIP: Phylogeny-based Molecular Identification Pipeline for DNA metabarcoding, and assessment of insect communities in subalpine river ecosystems
+Takumi Yshida, Shonosuke Shigeta, Yuta Hasebe, Masaki Takenaka
+bioRxiv 2025.11.10.687572; doi: https://doi.org/10.1101/2025.11.10.687572**
+
+
 # 使用時に感じた問題点
 →[new issue作成](https://github.com/shigebio/Phylo-MIP/issues)して記載いただけると🙏
