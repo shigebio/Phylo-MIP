@@ -162,5 +162,14 @@ Output file name default: time plefix on executed.
 
 The merged file will be output to woking directory.
 
+
+# Citation
+Please feel free to use it for personal use, but if you use this pipeline for research or other purposes in publications, we would appreciate it if you could cite the following:
+
+**Phylo-MIP: Phylogeny-based Molecular Identification Pipeline for DNA metabarcoding, and assessment of insect communities in subalpine river ecosystems
+Takumi Yshida, Shonosuke Shigeta, Yuta Hasebe, Masaki Takenaka
+bioRxiv 2025.11.10.687572; doi: https://doi.org/10.1101/2025.11.10.687572**
+
+
 # The problems you have experienced
 →Please [create a new issue](https://github.com/shigebio/Phylo-MIP/issues) and include the details🙏
