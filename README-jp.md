@@ -154,7 +154,7 @@ https://github.com/shigebio/Phylo-MIP/blob/main/app/Phylo-MIP.py#L291-L298
 ## How to Use merge_data.py
 **コマンドの実行**
     ```
-    merge_data -q {Qiimeの出力ファイルのパス} -m {Phylo-MIP pipelineの出力ファイルのパス} -f {任意の主力形式: csv/tsv} -o  {出力ファイル名}
+    merge_data -q {Qiimeの出力ファイルのパス} -p {Phylo-MIP pipelineの出力ファイルのパス} -f {任意の主力形式: csv/tsv} -o  {出力ファイル名}
     ```
 出力ファイル名のデフォルト: 実行時間のprefix
 結合後のファイルは実行時のディレクトリ下に出力されます。
