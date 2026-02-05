@@ -292,9 +292,9 @@ def process_row(index, row):
             taxonomic_name = taxonomic_info.get('species', 'Uncertain_taxonomy')
         elif 95.00 <= pident < 98.00:
             taxonomic_name = taxonomic_info.get('genus', 'Uncertain_taxonomy')
-        elif 90.00 <= pident < 95.00:
+        elif 92.00 <= pident < 95.00:
             taxonomic_name = taxonomic_info.get('family', 'Uncertain_taxonomy')
-        elif 85.00 <= pident < 90.00:
+        elif 85.00 <= pident < 92.00:
             taxonomic_name = taxonomic_info.get('order', 'Uncertain_taxonomy')
 
         class_name = taxonomic_info.get('class', 'Unknown')

@@ -191,7 +191,7 @@ def merge_files(qiime_file_path, fm_file_path, output_filename, output_format, d
             otu_id = normalize_id(row_qiime[otu_id_idx])
 
             # Get data matching qseqid from Phylo-MIP output file
-            matching_row_pm = data_.get(otu_id, None)
+            matching_row_pm = data_pm.get(otu_id, None)
 
             if matching_row_pm is not None:
                 match_count += 1

@@ -142,8 +142,8 @@ The taxonomic status of sequences assigned to an OTU is assigned according to th
 ```
 pident >= 98.00 : Species name
 95.00 <= pident < 98.00 : Genus name
-90.00 <= pident < 95.00 : Family name
-85.00 <= pident < 90.00 : Order name
+92.00 <= pident < 95.00 : Family name
+85.00 <= pident < 92.00 : Order name
 ```
 code: https://github.com/shigebio/Phylo-MIP/blob/main/app/Phylo-MIP.py#L291-L298
 

@@ -141,8 +141,8 @@ OTUにつけられる配列ごとの分類学的ステータスは、pident (loc
 ```
 pident >= 98.00 : 種名
 95.00 <= pident < 98.00 : 属名
-90.00 <= pident < 95.00 : 科名
-85.00 <= pident < 90.00 : 目名
+92.00 <= pident < 95.00 : 科名
+85.00 <= pident < 92.00 : 目名
 ```
 https://github.com/shigebio/Phylo-MIP/blob/main/app/Phylo-MIP.py#L291-L298
 
