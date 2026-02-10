@@ -106,33 +106,33 @@ Part of the NCBI guidelines
 ## Outputs
 ```
 === Directory Structure Verification ===
-micum_output_{execution time}/
+micum_output_{timestamp}/
   taxonomy/ # CSV, FASTA files with taxonomic information
-    taxonomic_data.csv
+    taxonomic_data.csv # Final output file integrating PTP analysis results and taxon information
     taxonomic_sequences.fasta
   phylogeny/ # Phylogenetic tree by fattree
-    {execution time}_ML_phylogenetic_tree.nex # The file will be prefixed with the execution time
-    {execution time}_ML_{execution time}_ML_phylogenetic_tree.nwk
+    {timestamp}_ML_phylogenetic_tree.nex # The file will be prefixed with the execution time
+    {timestamp}_ML_{execution time}_ML_phylogenetic_tree.nwk
   alignment/ # File after mafft and VSEARCH
-    {execution time}_haplotype_clusters.tsv # TSV file of haplotype identification results by VSEARCH
-    {execution time}_haplotype_clusters.csv　# CSV file of haplotype identification results by VSEARCH
-    {execution time}_clustered_sequences.fasta # File after removal of identical haplotypes by VSEARCH
-    {execution time}_aligned_sequences.fasta # File after alignment by MAFFT
+    {timestamp}_haplotype_clusters.tsv # TSV file of haplotype identification results by VSEARCH
+    {timestamp}_haplotype_clusters.csv　# CSV file of haplotype identification results by VSEARCH
+    {timestamp}_clustered_sequences.fasta # File after removal of identical haplotypes by VSEARCH
+    {timestamp}_aligned_sequences.fasta # File after alignment by MAFFT
   mptp/ # mptp output result
-    {execution time}_mPTP_analysis/
-    {execution time}_mPTP_species_delimitation.txt # TXT file containing assigned species and likelihood of each species
-    {execution time}_mPTP_species_delimitation.svg # Tree file (SVG)
+    {timestamp}_mPTP_analysis/
+    {timestamp}_mPTP_species_delimitation.txt # TXT file containing assigned species and likelihood of each species
+    {timestamp}_mPTP_species_delimitation.svg # Tree file (SVG)
   bptp/ # bptp output result
-    {execution time}_bPTP_analysis/
-    {execution time}_bPTP_species_delimitation.PTPhSupportPartition.txt.svg # Tree file (SVG) constructed by simple heuristic search
-    {execution time}_bPTP_species_delimitation.llh.pdf # Trace log graph of MCMC chain (PDF)
-    {execution time}_bPTP_species_delimitation.PTPhSupportPartition.txt.sh.tre # Tree file (TREE) constructed by simple heuristic search
-    {execution time}_bPTP_species_delimitation.PTPMLPartition.txt # TXT file containing species assigned by ML method and likelihood of each species
-    {execution time}_bPTP_species_delimitation.PTPMLPartition.txt.ml.tre # Tree file (TREE) constructed by ML method
-    {execution time}_bPTP_species_delimitation.PTPMLPartition.txt.png # Tree file (PNG) constructed by ML method
-    {execution time}_bPTP_species_delimitation.PTPllh.txt # MCMC chain trace log
-    {execution time}_bPTP_species_delimitation.PTPhSupportPartition.txt.png # Tree file (PNG) constructed by simple heuristic search
-    {execution time}_bPTP_species_delimitation.PTPPartitions.txt
+    {timestamp}_bPTP_analysis/
+    {timestamp}_bPTP_species_delimitation.PTPhSupportPartition.txt.svg # Tree file (SVG) constructed by simple heuristic search
+    {timestamp}_bPTP_species_delimitation.llh.pdf # Trace log graph of MCMC chain (PDF)
+    {timestamp}_bPTP_species_delimitation.PTPhSupportPartition.txt.sh.tre # Tree file (TREE) constructed by simple heuristic search
+    {timestamp}_bPTP_species_delimitation.PTPMLPartition.txt # TXT file containing species assigned by ML method and likelihood of each species
+    {timestamp}_bPTP_species_delimitation.PTPMLPartition.txt.ml.tre # Tree file (TREE) constructed by ML method
+    {timestamp}_bPTP_species_delimitation.PTPMLPartition.txt.png # Tree file (PNG) constructed by ML method
+    {timestamp}_bPTP_species_delimitation.PTPllh.txt # MCMC chain trace log
+    {timestamp}_bPTP_species_delimitation.PTPhSupportPartition.txt.png # Tree file (PNG) constructed by simple heuristic search
+    {timestamp}_bPTP_species_delimitation.PTPPartitions.txt
     {execution time}_bPTP_species_delimitation.PTPhSupportPartition.txt # TXT file containing species assigned by simple heuristic search and likelihood of each species
     {execution time}_bPTP_species_delimitation.PTPMLPartition.txt.svg # Tree file (SVG) constructed by ML method
     {execution time}_bPTP_species_delimitation.PTPPartitonSummary.txt # Species divided by each method
@@ -155,7 +155,7 @@ code: https://github.com/shigebio/Phylo-MIP/blob/main/app/Phylo-MIP.py#L291-L298
 ## How to Use merge_data
 **Basic commands**
   ```
-  merge_data -q {Qiime output file path} -m {Phylo-MIP pipeline output file path} -f {The file format you want to output: csv/tsv} -o {output file name}
+  merge_data -q {Qiime output file path} -p {Phylo-MIP pipeline output file path} -f {The file format you want to output: csv/tsv} -o {output file name}
   ```
 
 Output file name default: time plefix on executed.
