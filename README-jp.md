@@ -104,37 +104,38 @@ NCBIのガイドラインより一部抜粋
 
 ## 出力
 ```
+# ファイル名にはtimestamp型の実行時間のプレフィックスが付きます
 === Directory Structure Verification ===
-micum_output_{実行時間}/
+micum_output_{timestamp}/
   taxonomy/ # 分類情報を付与したCSV、FASTAファイル
-    taxonomic_data.csv
+    taxonomic_data.csv # PTP解析結果と分類群情報を統合した最終的な出力ファイル
     taxonomic_sequences.fasta
   phylogeny/ # fattreeによる系統樹
-    {実行時間}_ML_phylogenetic_tree.nex # ファイルの頭には実行時のprefixが付きます
-    {実行時間}_ML_{実行時間}_ML_phylogenetic_tree.nwk
+    {timestamp}_ML_phylogenetic_tree.nex # ファイルの頭には実行時のprefixが付きます
+    {timestamp}_ML_{timestamp}_ML_phylogenetic_tree.nwk
   alignment/ # mafft、VSEARCH実施後のファイル
-    {実行時間}_haplotype_clusters.tsv # VSEARCHによるハプロタイプ同定結果TSVファイル
-    {実行時間}_haplotype_clusters.csv　# VSEARCHによるハプロタイプ同定結果CSVファイル
-    {実行時間}_clustered_sequences.fasta # VSEARCHによる同一ハプロタイプの除去後のファイル
-    {実行時間}_aligned_sequences.fasta # MAFFTによるアライメント後のファイル
+    {timestamp}_haplotype_clusters.tsv # VSEARCHによるハプロタイプ同定結果TSVファイル
+    {timestamp}_haplotype_clusters.csv　# VSEARCHによるハプロタイプ同定結果CSVファイル
+    {timestamp}_clustered_sequences.fasta # VSEARCHによる同一ハプロタイプの除去後のファイル
+    {timestamp}_aligned_sequences.fasta # MAFFTによるアライメント後のファイル
   mptp/ # mptp出力結果
-    {実行時間}_mPTP_analysis/
-      {実行時間}_mPTP_species_delimitation.txt # 割り当てられたSpeciesと各Speciesの尤度を含むTXTファイル
-      {実行時間}_mPTP_species_delimitation.svg # 樹形ファイル(SVG)
+    {timestamp}_mPTP_analysis/
+      {timestamp}_mPTP_species_delimitation.txt # 割り当てられたSpeciesと各Speciesの尤度を含むTXTファイル
+      {timestamp}_mPTP_species_delimitation.svg # 樹形ファイル(SVG)
   bptp/ # bptp出力結果
-    {実行時間}_bPTP_analysis/
-      {実行時間}_bPTP_species_delimitation.PTPhSupportPartition.txt.svg # 簡易ヒューリスティック検索(simple heuristic search)により構築された樹形ファイル(SVG)
-      {実行時間}_bPTP_species_delimitation.llh.pdf # MCMC chainのtraceロググラフ(PDF)
-      {実行時間}_bPTP_species_delimitation.PTPhSupportPartition.txt.sh.tre # 簡易ヒューリスティック検索(simple heuristic search)により構築された樹形ファイル(TREE)
-      {実行時間}_bPTP_species_delimitation.PTPMLPartition.txt # ML法により割り当てられたSpeciesと各Speciesの尤度を含むTXTファイル
-      {実行時間}_bPTP_species_delimitation.PTPMLPartition.txt.ml.tre # ML法により構築された樹形ファイル(TREE)
-      {実行時間}_bPTP_species_delimitation.PTPMLPartition.txt.png # ML法により構築された樹形ファイル(PNG)
-      {実行時間}_bPTP_species_delimitation.PTPllh.txt # MCMC chainのtraceログ
-      {実行時間}_bPTP_species_delimitation.PTPhSupportPartition.txt.png # 簡易ヒューリスティック検索(simple heuristic search)により構築された樹形ファイル(PNG)
-      {実行時間}_bPTP_species_delimitation.PTPPartitions.txt
-      {実行時間}_bPTP_species_delimitation.PTPhSupportPartition.txt # 簡易ヒューリスティック検索(simple heuristic search)により割り当てられたSpeciesと各Speciesの尤度を含むTXTファイル
-      {実行時間}_bPTP_species_delimitation.PTPMLPartition.txt.svg # ML法により構築された樹形ファイル(SVG)
-      {実行時間}_bPTP_species_delimitation.PTPPartitonSummary.txt # 各手法で分割されたSpeiceis
+    {timestamp}_bPTP_analysis/
+      {timestamp}_bPTP_species_delimitation.PTPhSupportPartition.txt.svg # 簡易ヒューリスティック検索(simple heuristic search)により構築された樹形ファイル(SVG)
+      {timestamp}_bPTP_species_delimitation.llh.pdf # MCMC chainのtraceロググラフ(PDF)
+      {timestamp}_bPTP_species_delimitation.PTPhSupportPartition.txt.sh.tre # 簡易ヒューリスティック検索(simple heuristic search)により構築された樹形ファイル(TREE)
+      {timestamp}_bPTP_species_delimitation.PTPMLPartition.txt # ML法により割り当てられたSpeciesと各Speciesの尤度を含むTXTファイル
+      {timestamp}_bPTP_species_delimitation.PTPMLPartition.txt.ml.tre # ML法により構築された樹形ファイル(TREE)
+      {timestamp}_bPTP_species_delimitation.PTPMLPartition.txt.png # ML法により構築された樹形ファイル(PNG)
+      {timestamp}_bPTP_species_delimitation.PTPllh.txt # MCMC chainのtraceログ
+      {timestamp}_bPTP_species_delimitation.PTPhSupportPartition.txt.png # 簡易ヒューリスティック検索(simple heuristic search)により構築された樹形ファイル(PNG)
+      {timestamp}_bPTP_species_delimitation.PTPPartitions.txt
+      {timestamp}_bPTP_species_delimitation.PTPhSupportPartition.txt # 簡易ヒューリスティック検索(simple heuristic search)により割り当てられたSpeciesと各Speciesの尤度を含むTXTファイル
+      {timestamp}_bPTP_species_delimitation.PTPMLPartition.txt.svg # ML法により構築された樹形ファイル(SVG)
+      {timestamp}_bPTP_species_delimitation.PTPPartitonSummary.txt # 各手法で分割されたSpeiceis
 ```
 
 OTUにつけられる配列ごとの分類学的ステータスは、pident (localBLAST 検索での検索配列の一致率) の値によって下記ルールで割り当てられます:
