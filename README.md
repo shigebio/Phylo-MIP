@@ -105,6 +105,7 @@ Part of the NCBI guidelines
 
 ## Outputs
 ```
+# The file/directory name is prefixed with the execution time in timestamp format.
 === Directory Structure Verification ===
 micum_output_{timestamp}/
   taxonomy/ # CSV, FASTA files with taxonomic information
