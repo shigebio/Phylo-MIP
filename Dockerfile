@@ -1,7 +1,13 @@
+# SPDX-FileCopyrightText: 2024-2026 <actual copyright holder(s)>
+# SPDX-License-Identifier: GPL-3.0-only
+
 FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONPATH="/usr/local/lib/python3.7/site-packages"
+
+COPY LICENSE /app/LICENSE
+COPY THIRD_PARTY_NOTICES.md /app/THIRD_PARTY_NOTICES.md
 
 # Install required packages
 RUN apt-get update && apt-get install -y \

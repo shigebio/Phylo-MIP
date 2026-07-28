@@ -160,13 +160,35 @@ https://github.com/shigebio/Phylo-MIP/blob/main/app/Phylo-MIP.py#L291-L298
 出力ファイル名のデフォルト: 実行時間のprefix
 結合後のファイルは実行時のディレクトリ下に出力されます。
 
+## ライセンス
 
-# 引用
-個人的な使用の場合はお気兼ねなくご使用ください。出版物の発行に際して、このパイプラインを研究活動などにご使用になられた場合は以下を引用いただけますと幸いです:
+Phylo-MIPは、GNU General Public License version 3 only
+（`GPL-3.0-only`）の下で公開されています。
 
-**Phylo-MIP: Phylogeny-based Molecular Identification Pipeline for DNA metabarcoding, and assessment of insect communities in subalpine river ecosystems
-Takumi Yshida, Shonosuke Shigeta, Yuta Hasebe, Masaki Takenaka
-bioRxiv 2025.11.10.687572; doi: https://doi.org/10.1101/2025.11.10.687572**
+ライセンス全文は[LICENSE](LICENSE)を参照してください。
+
+このライセンスは、このリポジトリに含まれるPhylo-MIP独自のソースコードに
+適用されます。
+
+Phylo-MIPが使用する第三者のプログラムおよびライブラリには、それぞれの
+ライセンスが適用されます。
+
+詳細は[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)を参照してください。
+
+## 引用
+
+Phylo-MIPを研究に使用した場合は、次の文献を引用してください。
+
+**Phylo-MIP: Phylogeny-based Molecular Identification Pipeline for DNA
+metabarcoding, and assessment of insect communities in subalpine river
+ecosystems**
+
+Takumi Yoshida, Shonosuke Shigeta, Yuta Hasebe, and Masaki Takenaka.
+
+bioRxiv 2025.11.10.687572.
+
+文献の引用は学術上の帰属を明確にするための依頼であり、GNU General Public
+Licenseに追加される利用条件ではありません。
 
 
 # 使用時に感じた問題点

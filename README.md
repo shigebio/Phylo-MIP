@@ -165,7 +165,7 @@ The merged file will be output to woking directory.
 
 
 # Citation
-Please feel free to use it for personal use, but if you use this pipeline for research or other purposes in publications, we would appreciate it if you could cite the following:
+If you use this pipeline for research or other purposes in publications, we would appreciate it if you could cite the following:
 
 **Phylo-MIP: Phylogeny-based Molecular Identification Pipeline for DNA metabarcoding, and assessment of insect communities in subalpine river ecosystems
 Takumi Yshida, Shonosuke Shigeta, Yuta Hasebe, Masaki Takenaka
