@@ -163,6 +163,36 @@ Output file name default: time plefix on executed.
 
 The merged file will be output to woking directory.
 
+## License
+
+Phylo-MIP is licensed under the GNU General Public License version 3 only
+(`GPL-3.0-only`).
+
+See [LICENSE](LICENSE) for the full license text.
+
+This license applies to the original Phylo-MIP source code contained in this
+repository.
+
+Third-party programs and libraries used by Phylo-MIP remain subject to their
+respective licenses.
+
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for details.
+
+## Citation
+
+If you use Phylo-MIP in scientific research, please cite the following work:
+
+**Phylo-MIP: Phylogeny-based Molecular Identification Pipeline for DNA
+metabarcoding, and assessment of insect communities in subalpine river
+ecosystems**
+
+Takumi Yoshida, Shonosuke Shigeta, Yuta Hasebe, and Masaki Takenaka.
+
+bioRxiv 2025.11.10.687572.
+
+Citation of the publication is requested for scholarly attribution and is not
+an additional condition of the GNU General Public License.
+
 
 # Citation
 If you use this pipeline for research or other purposes in publications, we would appreciate it if you could cite the following:
