@@ -1,0 +1,1 @@
+Output regression fixtures are created in temporary directories by the tests.
