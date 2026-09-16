@@ -1,0 +1,2 @@
+Species 1 (support = 0.95)
+q1_ACC1_Species_one_99_00, q2_ACC2_Species_two_98_00
