@@ -1,6 +1,6 @@
 import os
+import pty
 import shutil
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -19,16 +19,13 @@ def test_docker_e2e_writes_output_on_host(tmp_path):
         encoding="utf-8",
     )
 
-    result = subprocess.run(
-        [str(project_root / "phylo-mip"), str(input_path), "--onlyp"],
-        cwd=project_root,
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=300,
-    )
-
-    assert result.returncode == 0, result.stderr
+    # The project wrapper intentionally uses ``docker run -it``.  Give it a
+    # pseudo-terminal so the E2E test exercises the wrapper rather than
+    # failing before Docker starts with "the input device is not a TTY".
+    if os.name == "nt":
+        pytest.skip("Docker wrapper E2E requires a POSIX pseudo-terminal")
+    status = pty.spawn([str(project_root / "phylo-mip"), str(input_path), "--onlyp"])
+    assert os.waitstatus_to_exitcode(status) == 0
     output_dirs = list(tmp_path.glob("phylomip_output_*"))
     assert output_dirs
     assert (output_dirs[0] / "taxonomy").exists()

@@ -1,4 +1,2 @@
-qseqid	haplotype
-q1	1
-q2	1
-q3	2
+label	Group	numOtus	Otu1	Otu2
+unique	all	2	2	1

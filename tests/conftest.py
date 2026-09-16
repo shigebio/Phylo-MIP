@@ -1,12 +1,48 @@
 import csv
 import importlib.util
+import os
+import shutil
 import sys
 import types
 from pathlib import Path
 
+import pytest
+import requests
+from Bio import Entrez
+
 
 PROJECT_ROOT = Path(__file__).parents[1]
 PHYLO_SCRIPT = PROJECT_ROOT / "app" / "Phylo-MIP.py"
+FIXTURES = PROJECT_ROOT / "tests" / "fixtures"
+
+
+@pytest.fixture
+def require_tools():
+    def require(*names):
+        if os.environ.get("RUN_INTEGRATION") != "1":
+            pytest.skip("Set RUN_INTEGRATION=1 to execute external analysis tools")
+        missing = [name for name in names if shutil.which(name) is None]
+        if missing:
+            pytest.skip("Missing external tools: " + ", ".join(missing))
+    return require
+
+
+@pytest.fixture(autouse=True)
+def block_live_taxonomy(monkeypatch):
+    def unexpected_request(*args, **kwargs):
+        pytest.fail("Live taxonomy requests are forbidden; supply a mock response")
+
+    monkeypatch.setattr(requests.sessions.Session, "request", unexpected_request)
+    monkeypatch.setattr(Entrez, "efetch", unexpected_request)
+
+
+@pytest.fixture
+def phylo_module(tmp_path, monkeypatch):
+    input_path = tmp_path / "input.csv"
+    write_blast_csv(input_path, [
+        {"qseqid": "q1", "sallacc": "ACC1", "pident": 99.0, "qseq": "ATGC"}
+    ])
+    return load_phylo_module(input_path, monkeypatch, "--onlyp")
 
 
 def load_phylo_module(input_csv, monkeypatch, *arguments):

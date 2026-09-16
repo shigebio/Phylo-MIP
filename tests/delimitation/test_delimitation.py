@@ -1,67 +1,81 @@
 import csv
 from pathlib import Path
 
-from conftest import load_phylo_module, write_blast_csv
+import pytest
+
+from conftest import FIXTURES
 
 
-def load_module(tmp_path, monkeypatch):
-    input_path = tmp_path / "input.csv"
-    write_blast_csv(input_path, [{"qseqid": "q1", "sallacc": "ACC1", "pident": 99.0, "qseq": "ATGC"}])
-    return load_phylo_module(input_path, monkeypatch, "--onlyp")
+@pytest.mark.parametrize("filename,species,support", [
+    ("bptp.PTPhSupportPartition.txt", {"q1": "1", "q2": "1", "q3": "2"},
+     {"q1": "0.95", "q2": "0.95", "q3": "0.80"}),
+    ("bptp.PTPMLPartition.txt", {"q1": "1", "q2": "2", "q3": "2"},
+     {"q1": "0.90", "q2": "0.75", "q3": "0.75"}),
+    ("mptp_species_delimitation.txt", {"q1": "3", "q2": "3", "q3": "4"},
+     {"q1": None, "q2": None, "q3": None}),
+])
+def test_partition_parser_matches_fixture(phylo_module, filename, species, support):
+    assert phylo_module["extract_species_data"](FIXTURES / "delimitation" / filename) == (species, support)
 
 
-def test_bptp_parser_maps_species_and_support_values(tmp_path, monkeypatch):
-    # bPTP partitionのspecies、support、OTU mappingを確認する / Verify bPTP species, support, and OTU mapping.
-    module = load_module(tmp_path, monkeypatch)
-    partition = tmp_path / "result.PTPhSupportPartition.txt"
-    partition.write_text(
-        "Species 1 (support = 0.95)\nq1_ACC1_Species_one_99_00, q2_ACC2_Species_two_98_00\n"
-        "Species 2 (support = 0.80)\nq3_ACC3_Species_three_97_00\n",
-        encoding="utf-8",
-    )
+def test_delimitation_wrappers_discovery_and_csv_update(phylo_module, monkeypatch):
+    timestamp = phylo_module["timestamp"]
+    tree_file = str(FIXTURES / "phylogeny/tree.nwk")
+    bptp_dir = Path(phylo_module["bptp_base_dir"]) / f"{timestamp}_bPTP_analysis"
+    mptp_dir = Path(phylo_module["mptp_base_dir"]) / f"{timestamp}_mPTP_analysis"
+    bptp_prefix = bptp_dir / f"{timestamp}_bPTP_species_delimitation"
+    mptp_prefix = mptp_dir / f"{timestamp}_mPTP_species_delimitation"
+    calls = []
 
-    species, support = module["extract_species_data"](partition)
+    def fake_run(command, check):
+        assert check
+        calls.append(command)
+        if "mptp" in command:
+            assert command == ["xvfb-run", "-a", "mptp", "-tree_file", tree_file,
+                               "-output_file", str(mptp_prefix), "-ml", "-single"]
+            prefix = Path(command[command.index("-output_file") + 1])
+            assert prefix.parent.is_dir()  # Created by the production wrapper.
+            Path(str(prefix) + ".txt").write_bytes(
+                (FIXTURES / "delimitation/mptp_species_delimitation.txt").read_bytes())
+            Path(str(prefix) + ".svg").write_text('<svg xmlns="http://www.w3.org/2000/svg"/>')
+        else:
+            assert command == ["xvfb-run", "-a", "python3", "/app/PTP/bin/bPTP.py",
+                               "-t", tree_file, "-o", str(bptp_prefix),
+                               "-s", "42", "-i", "1000", "-n", "10", "-b", "0.1"]
+            prefix = Path(command[command.index("-o") + 1])
+            assert prefix.parent.is_dir()
+            for suffix in [".PTPMLPartition.txt", ".PTPhSupportPartition.txt"]:
+                Path(str(prefix) + suffix).write_bytes(
+                    (FIXTURES / "delimitation" / ("bptp" + suffix)).read_bytes())
+            # Opaque external artifacts; real-tool tests validate actual production.
+            for suffix in [".PTPPartitions.txt", ".PTPPartitonSummary.txt", ".PTPllh.txt"]:
+                Path(str(prefix) + suffix).write_text("fixture external artifact\n")
 
-    assert species == {"q1": "1", "q2": "1", "q3": "2"}
-    assert support == {"q1": "0.95", "q2": "0.95", "q3": "0.80"}
+    monkeypatch.setattr(phylo_module["subprocess"], "run", fake_run)
+    phylo_module["run_bptp"](tree_file, 1000, 10, 0.1, 42, phylo_module["bptp_base_dir"])
+    phylo_module["run_mptp"](tree_file, phylo_module["mptp_base_dir"])
+    assert len(calls) == 2
+    assert {p.name for p in bptp_dir.iterdir()} == {
+        bptp_prefix.name + suffix for suffix in [
+            ".PTPMLPartition.txt", ".PTPhSupportPartition.txt", ".PTPPartitions.txt",
+            ".PTPPartitonSummary.txt", ".PTPllh.txt"]}
+    assert {p.name for p in mptp_dir.iterdir()} == {mptp_prefix.name + ".txt", mptp_prefix.name + ".svg"}
+    assert all(p.stat().st_size for directory in [bptp_dir, mptp_dir] for p in directory.iterdir())
 
-
-def test_delimitation_outputs_are_nonempty_and_update_taxonomy_csv(tmp_path, monkeypatch):
-    # bPTP/mPTP成果物とtaxonomy CSVへのpartition反映を確認する / Verify delimitation artifacts and taxonomy CSV updates.
-    module = load_module(tmp_path, monkeypatch)
-    bptp_dir = tmp_path / "20260916_bPTP_analysis"
-    mptp_dir = tmp_path / "20260916_mPTP_analysis"
-    bptp_dir.mkdir()
-    mptp_dir.mkdir()
-    for filename in (
-        "20260916_bPTP_species_delimitation.PTPMLPartition.txt",
-        "20260916_bPTP_species_delimitation.PTPhSupportPartition.txt",
-        "20260916_bPTP_species_delimitation.PTPPartitions.txt",
-        "20260916_bPTP_species_delimitation.PTPPartitonSummary.txt",
-        "20260916_bPTP_species_delimitation.PTPllh.txt",
-    ):
-        (bptp_dir / filename).write_text("Species 1\nq1_ACC1_Mock_99_00\n", encoding="utf-8")
-    (mptp_dir / "20260916_mPTP_species_delimitation.txt").write_text(
-        "Species 3\nq1_ACC1_Mock_99_00\n", encoding="utf-8"
-    )
-    (mptp_dir / "20260916_mPTP_species_delimitation.svg").write_text("<svg>mock</svg>", encoding="utf-8")
-    taxonomy_csv = tmp_path / "taxonomy.csv"
-    taxonomy_csv.write_text(
-        "qseqid,accessionID,taxonomic_name\nq1,ACC1,Mock\n", encoding="utf-8"
-    )
-
-    assert all(path.stat().st_size > 0 for path in bptp_dir.iterdir())
-    assert all(path.stat().st_size > 0 for path in mptp_dir.iterdir())
-    module["update_csv_with_species_data"](
-        taxonomy_csv,
-        {"q1": "1"}, {"q1": "0.95"},
-        {"q1": "2"}, {"q1": "0.90"},
-        {"q1": "3"},
-    )
-
-    with taxonomy_csv.open(encoding="utf-8", newline="") as handle:
-        row = next(csv.DictReader(handle))
-    assert row["bPTP_Bayesian_Partitioned_Species"] == "1"
-    assert row["PTPhSupport_support"] == "0.95"
-    assert row["bPTP_ML_Partitioned_Species"] == "2"
-    assert row["mPTP_Partitioned_Species"] == "3"
+    taxonomy = Path(phylo_module["taxonomy_dir"]) / "taxonomic_data.csv"
+    taxonomy.write_text("qseqid,accessionID,taxonomic_name\nq1,ACC1,One\nq2,ACC2,Two\nq3,ACC3,Three\nq4,ACC4,Unassigned\n")
+    phylo_module["process_ptp_outputs"]()
+    with taxonomy.open(newline="") as handle:
+        reader = csv.DictReader(handle)
+        assert reader.fieldnames == [
+            "qseqid", "accessionID", "taxonomic_name", "bPTP_Bayesian_Partitioned_Species",
+            "PTPhSupport_support", "bPTP_ML_Partitioned_Species", "PTPML_support", "mPTP_Partitioned_Species"]
+        rows = list(reader)
+    assert len(rows) == 4
+    for row, expected in zip(rows, [
+        ("q1", "ACC1", "One", "1", "0.95", "1", "0.90", "3"),
+        ("q2", "ACC2", "Two", "1", "0.95", "2", "0.75", "3"),
+        ("q3", "ACC3", "Three", "2", "0.80", "2", "0.75", "4"),
+        ("q4", "ACC4", "Unassigned", "", "", "", "", ""),
+    ]):
+        assert tuple(row.values()) == expected
