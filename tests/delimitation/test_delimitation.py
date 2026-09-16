@@ -1,3 +1,5 @@
+"""bPTP/mPTP の partition parser と、taxonomy CSV への反映を確認する。"""
+
 import csv
 from pathlib import Path
 

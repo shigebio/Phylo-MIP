@@ -1,3 +1,5 @@
+"""実際の bPTP/mPTP が出力する成果物の存在・parse 可否・species 対応を確認する。"""
+
 from pathlib import Path
 
 import pytest

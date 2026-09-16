@@ -1,3 +1,5 @@
+"""TSV/CSV の区切り判定と、OTU ID を基準にした merge 結果を確認する。"""
+
 import importlib.util
 from pathlib import Path
 

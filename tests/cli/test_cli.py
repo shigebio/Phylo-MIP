@@ -1,3 +1,5 @@
+"""CLI の必須引数・ヘルプ表示と、主要オプションの出力を確認する。"""
+
 import csv
 import subprocess
 import sys

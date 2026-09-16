@@ -1,3 +1,5 @@
+"""VSEARCH→MAFFT→FastTree の mocked pipeline と Newick/Nexus 出力を確認する。"""
+
 import shlex
 from pathlib import Path
 

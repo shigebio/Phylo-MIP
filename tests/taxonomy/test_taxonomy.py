@@ -1,3 +1,5 @@
+"""taxonomy API の fallback/retry、pident 境界、CSV/FASTA metadata 整合を確認する。"""
+
 import csv
 import io
 import json

@@ -1,3 +1,5 @@
+"""実際の FastTree が入力 alignment の terminal taxa を保持することを確認する。"""
+
 from pathlib import Path
 
 import pytest

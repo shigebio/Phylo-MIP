@@ -1,3 +1,5 @@
+"""実際の VSEARCH と MAFFT が生成する配列・クラスタ成果物を確認する。"""
+
 from pathlib import Path
 
 import pandas as pd

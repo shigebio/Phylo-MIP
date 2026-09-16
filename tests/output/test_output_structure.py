@@ -1,3 +1,5 @@
+"""timestamp 付き output directory と --o 指定・未指定時の basename を確認する。"""
+
 import csv
 import re
 import subprocess

@@ -1,3 +1,5 @@
+"""全テストで共有する fixture と、外部 API を遮断する補助関数。"""
+
 import csv
 import importlib.util
 import os

@@ -1,3 +1,5 @@
+"""VSEARCH/MAFFT wrapper のコマンド、出力ファイル名、変換結果を mock で確認する。"""
+
 import shlex
 from pathlib import Path
 

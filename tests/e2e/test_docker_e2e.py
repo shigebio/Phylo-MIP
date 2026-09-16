@@ -1,3 +1,5 @@
+"""Docker wrapper 実行後に、ホスト側へ出力ディレクトリが戻ることを確認する。"""
+
 import os
 import pty
 import shutil
