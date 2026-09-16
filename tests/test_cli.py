@@ -24,6 +24,7 @@ def run_cli(*arguments):
 
 
 def test_cli_requires_input_csv():
+    # 入力CSVを必須引数として検証する / Verify that the input CSV is required.
     result = run_cli()
 
     assert result.returncode == 2
@@ -31,6 +32,7 @@ def test_cli_requires_input_csv():
 
 
 def test_cli_help_accepts_primary_options():
+    # 主要CLIオプションがヘルプに表示されることを確認する / Verify that primary CLI options are advertised in help.
     result = run_cli(
         "--help",
     )
@@ -43,6 +45,7 @@ def test_cli_help_accepts_primary_options():
 
 
 def test_onlyp_writes_expected_fasta_and_csv(tmp_path):
+    # --onlyp のFASTA/CSV出力とclassフィルタを固定する / Pin the --onlyp FASTA/CSV output and class filtering behavior.
     input_path = tmp_path / "input.csv"
     with input_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
