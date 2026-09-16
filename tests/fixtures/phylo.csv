@@ -1,3 +1,0 @@
-qseqid,accessionID,class,order,family,taxonomic_name,pident,qseq,source
-q1,ACC001,Insecta,Lepidoptera,FamilyA,Species one,99.5,ATGC,NCBI
-q2,ACC002,Insecta,Coleoptera,FamilyB,Species two,98.0,GGTA,GBIF
