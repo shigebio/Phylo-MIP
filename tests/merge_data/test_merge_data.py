@@ -1,8 +1,10 @@
+"""TSV/CSV の区切り判定と、OTU ID を基準にした merge 結果を確認する。"""
+
 import importlib.util
 from pathlib import Path
 
 
-MODULE_PATH = Path(__file__).parents[1] / "app" / "merge_data.py"
+MODULE_PATH = Path(__file__).parents[2] / "app" / "merge_data.py"
 
 
 def load_merge_data_module():
@@ -29,11 +31,11 @@ def test_detect_delimiter_and_debug_read(tmp_path, capsys):
 def test_merge_files_matches_otu_ids_and_preserves_unmatched_rows(tmp_path):
     # qseqid照合とunmatched行の保持を確認する / Verify qseqid matching and preservation of unmatched rows.
     module = load_merge_data_module()
-    fixture_dir = Path(__file__).parent / "fixtures"
+    fixture_dir = Path(__file__).parents[1] / "fixtures"
     qiime_path = tmp_path / "qiime.tsv"
     phylo_path = tmp_path / "phylo.csv"
-    qiime_path.write_bytes((fixture_dir / "qiime.tsv").read_bytes())
-    phylo_path.write_bytes((fixture_dir / "phylo.csv").read_bytes())
+    qiime_path.write_bytes((fixture_dir / "merge_data" / "qiime.tsv").read_bytes())
+    phylo_path.write_bytes((fixture_dir / "merge_data" / "phylo.csv").read_bytes())
 
     module.merge_files(qiime_path, phylo_path, "merged.csv", "csv")
 

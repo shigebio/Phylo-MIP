@@ -1,10 +1,12 @@
+"""CLI の必須引数・ヘルプ表示と、主要オプションの出力を確認する。"""
+
 import csv
 import subprocess
 import sys
 from pathlib import Path
 
 
-SCRIPT_PATH = Path(__file__).parents[1] / "app" / "Phylo-MIP.py"
+SCRIPT_PATH = Path(__file__).parents[2] / "app" / "Phylo-MIP.py"
 
 
 def run_cli(*arguments):
@@ -33,9 +35,7 @@ def test_cli_requires_input_csv():
 
 def test_cli_help_accepts_primary_options():
     # 主要CLIオプションがヘルプに表示されることを確認する / Verify that primary CLI options are advertised in help.
-    result = run_cli(
-        "--help",
-    )
+    result = run_cli("--help")
 
     assert result.returncode == 0
     assert "--top" in result.stdout
@@ -53,14 +53,7 @@ def test_onlyp_writes_expected_fasta_and_csv(tmp_path):
         writer.writerow(["q1", "ACC001", "Insecta", "99.5", "ATGC"])
         writer.writerow(["q2", "ACC002", "Mammalia", "98.0", "GGTA"])
 
-    result = run_cli(
-        str(input_path),
-        "--onlyp",
-        "--class",
-        "Insecta",
-        "--o",
-        "regression",
-    )
+    result = run_cli(str(input_path), "--onlyp", "--class", "Insecta", "--o", "regression")
 
     assert result.returncode == 0, result.stderr
     output_dirs = list(tmp_path.glob("phylomip_output_*/taxonomy"))
