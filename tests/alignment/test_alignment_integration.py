@@ -19,7 +19,9 @@ def test_real_vsearch_collapses_only_identical_sequences(phylo_module, require_t
     inputs = list(SeqIO.parse(source, "fasta"))
     outputs = list(SeqIO.parse(result, "fasta"))
     assert len(inputs) == 4 and len(outputs) == 3
-    assert {str(r.seq) for r in outputs} == {str(r.seq) for r in inputs}
+    # VSEARCH may emit centroid sequences in lower case depending on its version.
+    # DNA sequence identity is case-insensitive for this regression check.
+    assert {str(r.seq).upper() for r in outputs} == {str(r.seq).upper() for r in inputs}
     assert len({r.id for r in outputs}) == 3
     assert {r.id for r in outputs} <= {r.id for r in inputs}
     tsv = pd.read_csv(alignment / f"{phylo_module['timestamp']}_haplotype_clusters.tsv", sep="\t")
