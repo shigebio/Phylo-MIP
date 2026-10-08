@@ -19,16 +19,21 @@ def test_real_vsearch_collapses_only_identical_sequences(phylo_module, require_t
     inputs = list(SeqIO.parse(source, "fasta"))
     outputs = list(SeqIO.parse(result, "fasta"))
     assert len(inputs) == 4 and len(outputs) == 3
-    assert {str(r.seq) for r in outputs} == {str(r.seq) for r in inputs}
+    # VSEARCH may emit centroid sequences in lower case depending on its version.
+    # DNA sequence identity is case-insensitive for this regression check.
+    assert {str(r.seq).upper() for r in outputs} == {str(r.seq).upper() for r in inputs}
     assert len({r.id for r in outputs}) == 3
     assert {r.id for r in outputs} <= {r.id for r in inputs}
     tsv = pd.read_csv(alignment / f"{phylo_module['timestamp']}_haplotype_clusters.tsv", sep="\t")
     converted = pd.read_csv(alignment / f"{phylo_module['timestamp']}_haplotype_clusters.csv")
     pd.testing.assert_frame_equal(tsv, converted)
     assert list(tsv.columns[:3]) == ["label", "Group", "numOtus"]
-    assert len(tsv) == 1
-    assert int(tsv.iloc[0, 2]) == 3
-    assert sorted(tsv.iloc[0, 3:].astype(int).tolist()) == [1, 1, 2]
+    # VSEARCH versions differ in whether the mothur table is emitted as one
+    # aggregate row or one row per input sequence.  Validate the shared
+    # clustering semantics instead of depending on either serialization.
+    assert set(tsv["numOtus"].astype(int)) == {3}
+    cluster_counts = tsv.iloc[:, 3:].apply(pd.to_numeric).sum(axis=0)
+    assert sorted(cluster_counts.astype(int).tolist()) == [1, 1, 2]
 
 
 def test_real_mafft_preserves_otus_and_ungapped_sequences(phylo_module, require_tools):
