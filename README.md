@@ -18,6 +18,11 @@ Designed for phylogenetic analysis using environmental DNA and more ...
 ## Installation
 1. Installing Docker
      - https://docs.docker.jp/engine/getstarted/step_one.html
+     - Before running `./setup.sh`, start the Docker engine and confirm that the current user can run `docker info` without `sudo`.
+       ```bash
+       docker info
+       ```
+       When using WSL, confirm that Docker Desktop WSL integration is enabled for the distribution.
 2. Download or clone Phylo-MIP
   Phylo-MIP is available as a direct download or by cloning the repository.
     <details><summary>DL link</summary>
