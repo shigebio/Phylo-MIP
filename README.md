@@ -38,10 +38,55 @@ Designed for phylogenetic analysis using environmental DNA and more ...
     ```
 4. Creating a virtual environment
     ```
-    chmod +x setup.sh
-    chmod +x entrypoint.sh
+    chmod +x setup.sh entrypoint.sh phylo-mip merge_data
     ./setup.sh
     ```
+
+### Launcher usage and migration from legacy launchers
+
+`setup.sh` uses the repository launchers `./phylo-mip` and `./merge_data` as the canonical commands. It no longer creates launcher copies under `$HOME/bin` or appends PATH entries to shell configuration files such as `.bashrc`, `.zshrc`, or `.bash_profile`.
+
+Run the launchers from the repository root:
+
+```bash
+./phylo-mip {Path to Input CSV} --tree {Options}
+./merge_data -q {Qiime output path} -p {Phylo-MIP output path} -f {Output format: csv/tsv} -o {Output filename}
+```
+
+If a previous `setup.sh` created launchers under `$HOME/bin`, PATH ordering may cause a legacy launcher to run first. Check the command locations:
+
+```bash
+type -a phylo-mip
+type -a merge_data
+# or
+command -v phylo-mip
+command -v merge_data
+
+ls -l "$HOME/bin/phylo-mip"
+ls -l "$HOME/bin/merge_data"
+```
+
+After confirming that the files are old Phylo-MIP launchers, remove them only at your own discretion. On Linux, macOS, WSL, Git Bash, and other POSIX shells:
+
+```bash
+rm -- "$HOME/bin/phylo-mip"
+rm -- "$HOME/bin/merge_data"
+hash -r 2>/dev/null || true
+type -a phylo-mip
+type -a merge_data
+```
+
+On Windows PowerShell:
+
+```powershell
+Remove-Item -LiteralPath (Join-Path $HOME "bin/phylo-mip")
+Remove-Item -LiteralPath (Join-Path $HOME "bin/merge_data")
+Get-Command phylo-mip -All
+Get-Command merge_data -All
+```
+
+Phylo-MIP does not automatically remove `export PATH="$HOME/bin:$PATH"`. If `$HOME/bin` is known to be dedicated to Phylo-MIP, decide yourself whether to remove that shell configuration entry.
+
 ---
 ## How to Use Phylo-MIP
 **Before you run**
@@ -59,11 +104,11 @@ Part of the NCBI guidelines
 
     **Basic commands**
       ```
-      phylo-mip {Path to Input CSV} --tree {Options}
+      ./phylo-mip {Path to Input CSV} --tree {Options}
       ```
     **Example**
       ```
-      phylo-mip ./path/to/your_input.csv --tree --method ML --bootstrap 250
+      ./phylo-mip ./path/to/your_input.csv --tree --method ML --bootstrap 250
       ```
 
    See [here](https://github.com/shigebio/Phylo-MIP/blob/main/README-Preparing_the_input_files.md) for acceptable input file formats
@@ -96,11 +141,11 @@ Part of the NCBI guidelines
 
    **If you only want to output FASTA and CSV files**
       ```
-      phylo-mip {input CSV file name} {output file name}
+      ./phylo-mip {input CSV file name} {output file name}
       ```
       **Example**
       ```
-      phylo-mip your_data.csv output
+      ./phylo-mip your_data.csv output
       ```
 
 ## Outputs
@@ -156,7 +201,7 @@ code: https://github.com/shigebio/Phylo-MIP/blob/main/app/Phylo-MIP.py#L291-L298
 ## How to Use merge_data
 **Basic commands**
   ```
-  merge_data -q {Qiime output file path} -p {Phylo-MIP pipeline output file path} -f {The file format you want to output: csv/tsv} -o {output file name}
+  ./merge_data -q {Qiime output file path} -p {Phylo-MIP pipeline output path} -f {Output format: csv/tsv} -o {output file name}
   ```
 
 Output file name default: time plefix on executed.
