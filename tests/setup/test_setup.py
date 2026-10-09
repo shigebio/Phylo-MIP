@@ -19,6 +19,7 @@ def run_setup(tmp_path, *arguments, legacy=False):
         legacy_bin.mkdir()
         (legacy_bin / "phylo-mip").write_text("legacy phylo-mip\n", encoding="utf-8")
         (legacy_bin / "merge_data").write_text("legacy merge_data\n", encoding="utf-8")
+        (home / ".bashrc").write_text("export PATH=\"$HOME/bin:$PATH\"\n# user setting\n", encoding="utf-8")
 
     fake_bin = tmp_path / "fake-bin"
     fake_bin.mkdir(exist_ok=True)
@@ -69,7 +70,7 @@ def test_setup_warns_and_preserves_legacy_launchers(tmp_path):
     assert (home / "bin" / "phylo-mip").read_text(encoding="utf-8") == "legacy phylo-mip\n"
     assert (home / "bin" / "merge_data").read_text(encoding="utf-8") == "legacy merge_data\n"
     assert not list((home / "bin").glob("*.backup.*"))
-    assert not (home / ".bashrc").exists()
+    assert (home / ".bashrc").read_text(encoding="utf-8") == "export PATH=\"$HOME/bin:$PATH\"\n# user setting\n"
 
 
 def test_repository_launchers_are_canonical_entrypoints(tmp_path):
