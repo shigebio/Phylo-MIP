@@ -127,7 +127,7 @@ def merge_files(qiime_file_path, fm_file_path, output_filename, output_format, d
                 if len(row) > otu_id_idx:
                     qiime_ids.append(normalize_id(row[otu_id_idx]))
 
-        _ids = list(data_pm.keys())
+        pm_ids = list(data_pm.keys())
 
         print(f"\nID MATCHING ANALYSIS:")
         print(f"QIIME file has {len(qiime_ids)} OTU IDs")

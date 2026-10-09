@@ -44,3 +44,24 @@ def test_merge_files_matches_otu_ids_and_preserves_unmatched_rows(tmp_path):
     assert rows[0] == "Sample,#OTU ID,qseqid,accessionID,class,order,family,taxonomic_name,pident,qseq,source,Abundance"
     assert rows[1] == "sample-a,q1,q1,ACC001,Insecta,Lepidoptera,FamilyA,Species one,99.5,ATGC,NCBI,10"
     assert rows[2] == "sample-b,missing,,,,,,,,,,4"
+
+
+def test_merge_files_debug_reports_matching_ids_and_writes_output(tmp_path, capsys):
+    # debug情報のID集計と、debug modeでのmerge出力生成を確認する。
+    module = load_merge_data_module()
+    fixture_dir = Path(__file__).parents[1] / "fixtures"
+    qiime_path = tmp_path / "qiime.tsv"
+    phylo_path = tmp_path / "phylo.csv"
+    qiime_path.write_bytes((fixture_dir / "merge_data" / "qiime.tsv").read_bytes())
+    phylo_path.write_bytes((fixture_dir / "merge_data" / "phylo.csv").read_bytes())
+
+    module.merge_files(qiime_path, phylo_path, "debug_merged.csv", "csv", debug=True)
+
+    output = capsys.readouterr().out
+    assert "QIIME file has 2 OTU IDs" in output
+    assert "Phylo-MIP file has 2 qseqids" in output
+    assert "Number of common IDs: 1" in output
+    assert "Percentage of QIIME IDs matched: 50.00%" in output
+    assert (tmp_path / "debug_merged.csv").read_text(encoding="utf-8").splitlines()[1].startswith(
+        "sample-a,q1,q1,ACC001"
+    )
