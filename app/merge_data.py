@@ -126,7 +126,7 @@ def merge_files(qiime_file_path, fm_file_path, output_filename, output_format, d
             break
 
     if otu_id_idx == -1:
-        print("Error: supported QIIME OTU ID column not found in Qiime output file")
+        print("Error: supported QIIME "#OTU ID" column not found in Qiime output file")
         sys.exit(1)
 
     # Read data from Phylo-MIP output file
