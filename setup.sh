@@ -9,12 +9,6 @@
 # リポジトリ内launcherをcanonicalとしてDocker環境を構築するsetup script
 # Build the Docker environment while keeping repository launchers canonical.
 
-UPDATE_MODE=false
-if [[ "${1:-}" == "--update" ]]; then
-    UPDATE_MODE=true
-    echo "--update is accepted for compatibility; repository launchers are canonical and are not copied."
-fi
-
 REPOSITORY_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 for launcher in phylo-mip merge_data; do

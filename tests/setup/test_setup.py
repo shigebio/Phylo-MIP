@@ -62,7 +62,7 @@ def test_setup_does_not_create_home_launcher_or_edit_shell_rc(tmp_path):
 
 def test_setup_warns_and_preserves_legacy_launchers(tmp_path):
     # legacy launcherを警告のみで保持することを確認する / Verify legacy launchers are warned about and preserved.
-    result, home, _ = run_setup(tmp_path, "--update", legacy=True)
+    result, home, _ = run_setup(tmp_path, legacy=True)
     assert result.returncode == 0, result.stderr
     assert "legacy launcher detected" in result.stdout
     assert str(home / "bin" / "phylo-mip") in result.stdout

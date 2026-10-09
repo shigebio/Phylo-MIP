@@ -40,51 +40,6 @@
     ./setup.sh
     ```
 
-### launcherの利用と旧launcherからの移行
-
-`setup.sh`はrepository内の`./phylo-mip`と`./merge_data`をcanonical launcherとして使用します。`$HOME/bin`へのlauncherコピー作成、shell設定（`.bashrc`、`.zshrc`、`.bash_profile`等）へのPATH追記は行いません。
-
-repository rootから次のように実行してください。
-
-```bash
-./phylo-mip {入力CSVファイルのパス} --tree {オプション}
-./merge_data -q {Qiimeの出力ファイルのパス} -p {Phylo-MIP pipelineの出力ファイルのパス} -f {出力形式: csv/tsv} -o {出力ファイル名}
-```
-
-過去の`setup.sh`で作成されたlauncherが残っている場合、PATHの順序によって旧launcherが優先される可能性があります。現在実行されるcommandを確認してください。
-
-```bash
-type -a phylo-mip
-type -a merge_data
-# または / alternatively
-command -v phylo-mip
-command -v merge_data
-
-ls -l "$HOME/bin/phylo-mip"
-ls -l "$HOME/bin/merge_data"
-```
-
-旧Phylo-MIP launcherであることを確認した場合だけ、ユーザー自身の判断で削除してください。Linux、macOS、WSL、Git Bash等のPOSIX shellでは次の例を使用できます。
-
-```bash
-rm -- "$HOME/bin/phylo-mip"
-rm -- "$HOME/bin/merge_data"
-hash -r 2>/dev/null || true
-type -a phylo-mip
-type -a merge_data
-```
-
-Windows PowerShellでは次の例を使用できます。
-
-```powershell
-Remove-Item -LiteralPath (Join-Path $HOME "bin/phylo-mip")
-Remove-Item -LiteralPath (Join-Path $HOME "bin/merge_data")
-Get-Command phylo-mip -All
-Get-Command merge_data -All
-```
-
-`export PATH="$HOME/bin:$PATH"`自体は自動削除しません。`$HOME/bin`をPhylo-MIP専用に使用していたことが明確な場合だけ、shell設定から削除するかをユーザー自身で判断してください。
-
 ---
 ## How to Use Phylo-MIP
 **実行の前に**
