@@ -18,6 +18,19 @@ for launcher in phylo-mip merge_data; do
     fi
 done
 
+if ! command -v docker >/dev/null 2>&1; then
+    echo "ERROR: Docker CLI is not available in PATH." >&2
+    echo "Install Docker before running setup.sh." >&2
+    exit 1
+fi
+
+if ! docker info >/dev/null 2>&1; then
+    echo "ERROR: Docker is installed, but the Docker engine is not accessible." >&2
+    echo "Confirm that Docker is running and that the current user can run 'docker info' without sudo." >&2
+    echo "When using WSL, confirm Docker Desktop WSL integration for this distribution." >&2
+    exit 1
+fi
+
 warn_legacy_launcher() {
     local launcher_name="$1"
     local legacy_path="${HOME:-}/bin/$launcher_name"
@@ -89,6 +102,12 @@ if [[ "$OS_TYPE" == "macos" ]]; then
     fi
 else
     docker build -t phylo-mip "$REPOSITORY_DIR"
+fi
+
+BUILD_STATUS=$?
+if [[ "$BUILD_STATUS" -ne 0 ]]; then
+    echo "ERROR: Docker image build failed (exit status $BUILD_STATUS)." >&2
+    exit "$BUILD_STATUS"
 fi
 
 echo "Setup complete."
