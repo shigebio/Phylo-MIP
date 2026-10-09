@@ -36,8 +36,7 @@
 
 1. 仮想環境の構築
     ```
-    chmod +x setup.sh
-    chmod +x entrypoint.sh
+    chmod +x setup.sh entrypoint.sh phylo-mip merge_data
     ./setup.sh
     ```
 
@@ -58,11 +57,11 @@ NCBIのガイドラインより一部抜粋
 
     **基本のコマンド**
       ```
-      phylo-mip {入力CSVファイルのパス} --tree {オプション}
+      ./phylo-mip {入力CSVファイルのパス} --tree {オプション}
       ```
     **例**
       ```
-      phylo-mip ./paht/your_input.csv --tree --method ML --bootstrap 250
+      ./phylo-mip ./path/your_input.csv --tree --method ML --bootstrap 250
       ```
 
    インプット用CSVの作成方法は[こちら](https://github.com/shigebio/Phylo-MIP/blob/main/README-Preparing_the_input_files.jp.md)を参照
@@ -95,11 +94,11 @@ NCBIのガイドラインより一部抜粋
 
    **FASTAファイルとCSVファイル出力だけしたい場合**
       ```
-      phylo-mip {入力CSVファイル名} {出力ファイル名}
+      ./phylo-mip {入力CSVファイル名} {出力ファイル名}
       ```
     **例**
       ```
-      phylo-mip ./path/your_data.csv output_mame
+      ./phylo-mip ./path/your_data.csv output_mame
       ```
 
 ## 出力
@@ -155,7 +154,7 @@ https://github.com/shigebio/Phylo-MIP/blob/main/app/Phylo-MIP.py#L291-L298
 ## How to Use merge_data.py
 **コマンドの実行**
     ```
-    merge_data -q {Qiimeの出力ファイルのパス} -p {Phylo-MIP pipelineの出力ファイルのパス} -f {任意の主力形式: csv/tsv} -o  {出力ファイル名}
+    ./merge_data -q {Qiimeの出力ファイルのパス} -p {Phylo-MIP pipelineの出力ファイルのパス} -f {任意の出力形式: csv/tsv} -o  {出力ファイル名}
     ```
 出力ファイル名のデフォルト: 実行時間のprefix
 結合後のファイルは実行時のディレクトリ下に出力されます。

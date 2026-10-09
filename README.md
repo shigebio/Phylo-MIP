@@ -38,10 +38,10 @@ Designed for phylogenetic analysis using environmental DNA and more ...
     ```
 4. Creating a virtual environment
     ```
-    chmod +x setup.sh
-    chmod +x entrypoint.sh
+    chmod +x setup.sh entrypoint.sh phylo-mip merge_data
     ./setup.sh
     ```
+
 ---
 ## How to Use Phylo-MIP
 **Before you run**
@@ -59,11 +59,11 @@ Part of the NCBI guidelines
 
     **Basic commands**
       ```
-      phylo-mip {Path to Input CSV} --tree {Options}
+      ./phylo-mip {Path to Input CSV} --tree {Options}
       ```
     **Example**
       ```
-      phylo-mip ./path/to/your_input.csv --tree --method ML --bootstrap 250
+      ./phylo-mip ./path/to/your_input.csv --tree --method ML --bootstrap 250
       ```
 
    See [here](https://github.com/shigebio/Phylo-MIP/blob/main/README-Preparing_the_input_files.md) for acceptable input file formats
@@ -96,11 +96,11 @@ Part of the NCBI guidelines
 
    **If you only want to output FASTA and CSV files**
       ```
-      phylo-mip {input CSV file name} {output file name}
+      ./phylo-mip {input CSV file name} {output file name}
       ```
       **Example**
       ```
-      phylo-mip your_data.csv output
+      ./phylo-mip your_data.csv output
       ```
 
 ## Outputs
@@ -156,7 +156,7 @@ code: https://github.com/shigebio/Phylo-MIP/blob/main/app/Phylo-MIP.py#L291-L298
 ## How to Use merge_data
 **Basic commands**
   ```
-  merge_data -q {Qiime output file path} -p {Phylo-MIP pipeline output file path} -f {The file format you want to output: csv/tsv} -o {output file name}
+  ./merge_data -q {Qiime output file path} -p {Phylo-MIP pipeline output path} -f {Output format: csv/tsv} -o {output file name}
   ```
 
 Output file name default: time plefix on executed.
