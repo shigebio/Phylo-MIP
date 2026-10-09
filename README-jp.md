@@ -17,6 +17,11 @@
 ## Installation
 1. Dockerの導入
      - https://docs.docker.jp/engine/getstarted/step_one.html
+     - `./setup.sh`実行前にDocker engineを起動し、current userで`sudo`なしの`docker info`が成功することを確認してください。
+       ```bash
+       docker info
+       ```
+       WSLを使用する場合は、対象distributionに対するDocker DesktopのWSL integrationを確認してください。
 1. Phylo-MIP or クローン
     <details><summary>DLリンク</summary>
 
