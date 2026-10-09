@@ -61,7 +61,7 @@ NCBIのガイドラインより一部抜粋
       ```
     **例**
       ```
-      ./phylo-mip ./paht/your_input.csv --tree --method ML --bootstrap 250
+      ./phylo-mip ./path/your_input.csv --tree --method ML --bootstrap 250
       ```
 
    インプット用CSVの作成方法は[こちら](https://github.com/shigebio/Phylo-MIP/blob/main/README-Preparing_the_input_files.jp.md)を参照
