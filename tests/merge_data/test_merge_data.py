@@ -1,7 +1,10 @@
 """TSV/CSV の区切り判定と、OTU ID を基準にした merge 結果を確認する。"""
 
 import importlib.util
+import csv
 from pathlib import Path
+
+import pytest
 
 
 MODULE_PATH = Path(__file__).parents[2] / "app" / "merge_data.py"
@@ -44,6 +47,31 @@ def test_merge_files_matches_otu_ids_and_preserves_unmatched_rows(tmp_path):
     assert rows[0] == "Sample,#OTU ID,qseqid,accessionID,class,order,family,taxonomic_name,pident,qseq,source,Abundance"
     assert rows[1] == "sample-a,q1,q1,ACC001,Insecta,Lepidoptera,FamilyA,Species one,99.5,ATGC,NCBI,10"
     assert rows[2] == "sample-b,missing,,,,,,,,,,4"
+
+
+@pytest.mark.parametrize("fixture_name, otu_header", [
+    ("qiime_with_preamble.tsv", "#OTU ID"),
+    ("qiime_with_preamble_underscore.tsv", "#OTU_ID"),
+])
+def test_merge_files_detects_qiime_header_after_preamble(tmp_path, fixture_name, otu_header):
+    # 前置き行後のQIIME header検出とOTU ID照合を確認する / Verify QIIME header detection after a preamble and OTU ID matching.
+    module = load_merge_data_module()
+    fixture_dir = Path(__file__).parents[1] / "fixtures" / "merge_data"
+    qiime_path = tmp_path / fixture_name
+    phylo_path = tmp_path / "phylo.csv"
+    qiime_path.write_bytes((fixture_dir / fixture_name).read_bytes())
+    phylo_path.write_bytes((fixture_dir / "phylo.csv").read_bytes())
+
+    module.merge_files(qiime_path, phylo_path, "merged.tsv", "tsv")
+
+    with (tmp_path / "merged.tsv").open(newline="", encoding="utf-8") as output_file:
+        rows = list(csv.reader(output_file, delimiter="\t"))
+
+    assert rows[0][0:3] == ["#OTU ID" if otu_header == "#OTU ID" else "#OTU_ID", "qseqid", "accessionID"]
+    assert rows[1][0:4] == ["q1", "q1", "ACC001", "Insecta"]
+    assert rows[2][0] == "missing"
+    assert rows[2][1:10] == ["", "", "", "", "", "", "", "", ""]
+    assert rows[2][-2:] == ["0", "5"]
 
 
 def test_merge_files_debug_reports_matching_ids_and_writes_output(tmp_path, capsys):

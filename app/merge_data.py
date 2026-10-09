@@ -14,6 +14,26 @@ import sys
 import datetime
 import re
 
+
+QIIME_ID_HEADERS = {"#OTU ID", "#OTU_ID"}
+
+
+def find_qiime_header(file_path):
+    """Find the QIIME OTU header and its delimiter after optional preamble lines."""
+    with open(file_path, 'r', encoding='utf-8') as file:
+        for line_number, line in enumerate(file):
+            line = line.rstrip('\r\n')
+            if not line:
+                continue
+
+            for delimiter in ('\t', ','):
+                headers = next(csv.reader([line], delimiter=delimiter))
+                if any(header.strip() in QIIME_ID_HEADERS for header in headers):
+                    return delimiter, headers, line_number
+
+    print(f"Error: QIIME OTU ID header not found in '{file_path}'")
+    sys.exit(1)
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Insert data from Phylo-MIP output file into Qiime output file (TSV or CSV)")
 
@@ -89,8 +109,8 @@ def read_file_into_dict(file_path, key_column, debug=False):
 
 def merge_files(qiime_file_path, fm_file_path, output_filename, output_format, debug=False):
     # Create a new file by combining the Qiime output file and the Phylo-MIP output file
-    # Detect delimiter in qiime output file
-    delimiter_q = detect_delimiter(qiime_file_path)
+    # Find the QIIME header after any optional preamble lines.
+    delimiter_q, headers_qiime, qiime_header_line = find_qiime_header(qiime_file_path)
 
     # Detect delimiter in Phylo-MIP output file
     delimiter_m = detect_delimiter(fm_file_path)
@@ -98,19 +118,15 @@ def merge_files(qiime_file_path, fm_file_path, output_filename, output_format, d
     # Set the delimiter for the output file
     output_delimiter = '\t' if output_format == 'tsv' else ','
 
-    with open(qiime_file_path, 'r', encoding='utf-8') as file_qiime:
-        reader_qiime = csv.reader(file_qiime, delimiter=delimiter_q)
-        headers_qiime = next(reader_qiime)
-
-    # Find the column index for "#OTU ID" column
+    # Find the column index for the supported QIIME OTU ID column.
     otu_id_idx = -1
     for i, header in enumerate(headers_qiime):
-        if header == '#OTU ID':
+        if header.strip() in QIIME_ID_HEADERS:
             otu_id_idx = i
             break
 
     if otu_id_idx == -1:
-        print("Error: '#OTU ID' column not found in Qiime output file")
+        print("Error: supported QIIME OTU ID column not found in Qiime output file")
         sys.exit(1)
 
     # Read data from Phylo-MIP output file
@@ -122,7 +138,8 @@ def merge_files(qiime_file_path, fm_file_path, output_filename, output_format, d
         qiime_ids = []
         with open(qiime_file_path, 'r', encoding='utf-8') as file_qiime:
             reader_qiime = csv.reader(file_qiime, delimiter=delimiter_q)
-            next(reader_qiime)  # Skip header
+            for _ in range(qiime_header_line + 1):
+                next(reader_qiime, None)
             for row in reader_qiime:
                 if len(row) > otu_id_idx:
                     qiime_ids.append(normalize_id(row[otu_id_idx]))
@@ -180,7 +197,8 @@ def merge_files(qiime_file_path, fm_file_path, output_filename, output_format, d
         reader_qiime = csv.reader(file_qiime, delimiter=delimiter_q)
         writer = csv.writer(output_file, delimiter=output_delimiter)
 
-        headers_qiime = next(reader_qiime)
+        for _ in range(qiime_header_line + 1):
+            next(reader_qiime, None)
 
         # Output headers: Qiime output file headers up to the #OTU ID + all headers from Phylo-MIP output file + remaining headers from Qiime output file
         new_headers = headers_qiime[:otu_id_idx+1] + headers_pm + headers_qiime[otu_id_idx+1:]
