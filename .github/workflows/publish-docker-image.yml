@@ -65,8 +65,8 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          # Current repository setting retained pending DockerHub destination confirmation.
-          images: shigebio/micum
+          # DockerHub slug follows the confirmed Phylo-MIP repository name.
+          images: shigebio/phylo-mip
           tags: |
             type=raw,value=${{ steps.release.outputs.image_tag }}
             type=raw,value=latest,enable=${{ steps.release.outputs.latest == 'true' }}
@@ -84,6 +84,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: shigebio/micum
+          repository: shigebio/phylo-mip
           readme-filepath: ./README.md
           short-description: ${{ github.event.repository.description }}
