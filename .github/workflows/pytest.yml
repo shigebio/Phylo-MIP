@@ -1,19 +1,52 @@
-name: Pytest
+name: Test and Docker build
+
+# pytest runs for normal PR validation.
+# Docker build validation runs only when image-affecting files change.
+# Normal PR/main workflows never publish images.
 
 on:
   pull_request:
     branches:
       - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
 
 jobs:
+  changes:
+    name: Detect Docker image changes
+    runs-on: ubuntu-latest
+    outputs:
+      docker: ${{ steps.filter.outputs.docker }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v7
+
+      - name: Detect image-affecting changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            docker:
+              - 'Dockerfile'
+              - 'requirements.txt'
+              - 'app/**'
+              - 'entrypoint.sh'
+              - 'LICENSE'
+              - 'THIRD_PARTY_NOTICES.md'
+              - '.github/workflows/pytest.yml'
+
   pytest:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.10"
 
@@ -22,3 +55,25 @@ jobs:
 
       - name: Run pytest
         run: python -m pytest -q
+
+  docker-build:
+    name: Docker build validation
+    needs: changes
+    if: needs.changes.outputs.docker == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build Docker image without publishing
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: false
+          load: false
+          tags: phylo-mip:ci
+          cache-from: type=gha,scope=phylo-mip-docker
+          cache-to: type=gha,mode=max,scope=phylo-mip-docker
