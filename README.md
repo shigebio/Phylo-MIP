@@ -193,19 +193,9 @@ ecosystems**
 
 Takumi Yoshida, Shonosuke Shigeta, Yuta Hasebe, and Masaki Takenaka.
 
-bioRxiv 2025.11.10.687572.
+bioRxiv 2025.11.10.687572. DOI: [10.1101/2025.11.10.687572](https://doi.org/10.1101/2025.11.10.687572).
 
 Citation of the publication is requested for scholarly attribution and is not
 an additional condition of the GNU General Public License.
-
-
-# Citation
-If you use this pipeline for research or other purposes in publications, we would appreciate it if you could cite the following:
-
-**Phylo-MIP: Phylogeny-based Molecular Identification Pipeline for DNA metabarcoding, and assessment of insect communities in subalpine river ecosystems
-Takumi Yshida, Shonosuke Shigeta, Yuta Hasebe, Masaki Takenaka
-bioRxiv 2025.11.10.687572; doi: https://doi.org/10.1101/2025.11.10.687572**
-
-
 # The problems you have experienced
 →Please [create a new issue](https://github.com/shigebio/Phylo-MIP/issues) and include the details🙏

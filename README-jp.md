@@ -189,7 +189,7 @@ ecosystems**
 
 Takumi Yoshida, Shonosuke Shigeta, Yuta Hasebe, and Masaki Takenaka.
 
-bioRxiv 2025.11.10.687572.
+bioRxiv 2025.11.10.687572。DOI: [10.1101/2025.11.10.687572](https://doi.org/10.1101/2025.11.10.687572)。
 
 文献の引用は学術上の帰属を明確にするための依頼であり、GNU General Public
 Licenseに追加される利用条件ではありません。
