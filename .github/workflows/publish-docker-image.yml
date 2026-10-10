@@ -1,5 +1,8 @@
 name: Publish Docker image
 
+# Release publication or explicit manual dispatch is the DockerHub publish boundary.
+# This workflow always builds the selected release/ref; no paths filter is applied.
+
 on:
   release:
     types: [published]
@@ -65,7 +68,6 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          # DockerHub slug follows the confirmed Phylo-MIP repository name.
           images: shigebio/phylo-mip
           tags: |
             type=raw,value=${{ steps.release.outputs.image_tag }}
@@ -78,6 +80,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=phylo-mip-docker
+          cache-to: type=gha,mode=max,scope=phylo-mip-docker
 
       - name: Update Docker Hub description
         uses: peter-evans/dockerhub-description@v5

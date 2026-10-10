@@ -1,5 +1,9 @@
 name: Test and Docker build
 
+# pytest runs for normal PR validation.
+# Docker build validation runs only when image-affecting files change.
+# Normal PR/main workflows never publish images.
+
 on:
   pull_request:
     branches:
@@ -8,7 +12,33 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
+  changes:
+    name: Detect Docker image changes
+    runs-on: ubuntu-latest
+    outputs:
+      docker: ${{ steps.filter.outputs.docker }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v7
+
+      - name: Detect image-affecting changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            docker:
+              - 'Dockerfile'
+              - 'requirements.txt'
+              - 'app/**'
+              - 'entrypoint.sh'
+              - 'LICENSE'
+              - 'THIRD_PARTY_NOTICES.md'
+              - '.github/workflows/pytest.yml'
+
   pytest:
     runs-on: ubuntu-latest
     steps:
@@ -28,6 +58,8 @@ jobs:
 
   docker-build:
     name: Docker build validation
+    needs: changes
+    if: needs.changes.outputs.docker == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
@@ -43,3 +75,5 @@ jobs:
           push: false
           load: false
           tags: phylo-mip:ci
+          cache-from: type=gha,scope=phylo-mip-docker
+          cache-to: type=gha,mode=max,scope=phylo-mip-docker
