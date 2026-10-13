@@ -25,7 +25,7 @@ if os.environ.get("NCBI_API_KEY"):
 
 TAXONOMY_RANKS = ("kingdom", "phylum", "class", "order", "family", "genus", "species")
 LEGACY_COLUMNS = (
-    "qseqid", "accessionID", "class", "order", "family", "taxonomic_name", "pident", "qseq", "source"
+    "qseqid", "accessionID", "class", "order", "family", "taxonomic_name", "pident", "qseq"
 )
 TAXONOMY_COLUMNS = (
     "ncbi_taxid",
@@ -103,7 +103,6 @@ class TaxonomyRecord:
     accession_id: str
     pident: float
     qseq: str
-    legacy_source: str
     ncbi_taxid: Optional[str] = None
     ncbi_ranks: dict = field(default_factory=_empty_ranks)
     gbif_ranks: dict = field(default_factory=_empty_ranks)
@@ -115,7 +114,7 @@ class TaxonomyRecord:
     gbif_metadata: dict = field(default_factory=dict)
 
     def to_csv_row(self):
-        """Serialize while retaining the existing nine leading columns."""
+        """Serialize while retaining the existing taxonomy fields."""
         row = [
             self.qseqid,
             self.accession_id,
@@ -125,7 +124,6 @@ class TaxonomyRecord:
             self.taxonomic_name,
             self.pident,
             self.qseq,
-            self.legacy_source,
             self.ncbi_taxid,
         ]
         row.extend(self.ncbi_ranks.get(rank) for rank in TAXONOMY_RANKS)
@@ -454,7 +452,7 @@ class TaxonomyProcessor:
         try:
             records = self.fetch_ncbi_data(accessionID)
             if not records:
-                record = TaxonomyRecord(qseqid, accessionID, pident, qseq, "NCBI Failed")
+                record = TaxonomyRecord(qseqid, accessionID, pident, qseq, resolved_source="unresolved")
                 fasta_entry = f">{sanitize_otu_name(f'{qseqid}_{accessionID}_{record.taxonomic_name}_{pident:.2f}')}\n{qseq}\n"
                 return fasta_entry, record.to_csv_row()
 
@@ -479,14 +477,9 @@ class TaxonomyProcessor:
             else:
                 resolved_ranks, resolved_source = _empty_ranks(), "unresolved"
 
-            # 旧source列もassignmentに使用したtaxonomy backboneを示す。
-            # lineage fallbackだけは既存利用との互換性のためNCBI表記を維持する。
-            legacy_source = (
-                "NCBI" if resolved_source == "NCBI_lineage_fallback" else resolved_source
-            )
             taxonomic_name = self._taxonomic_name(resolved_ranks, pident)
             record = TaxonomyRecord(
-                qseqid, accessionID, pident, qseq, legacy_source,
+                qseqid, accessionID, pident, qseq,
                 ncbi_taxid=ncbi_taxid,
                 ncbi_ranks=ncbi_ranks,
                 gbif_ranks=gbif_ranks,
@@ -502,7 +495,7 @@ class TaxonomyProcessor:
             return fasta_entry, record.to_csv_row()
         except Exception as exc:
             print(f"Error in qseqid {qseqid}: {exc}")
-            record = TaxonomyRecord(qseqid, accessionID, pident, qseq, "Error")
+            record = TaxonomyRecord(qseqid, accessionID, pident, qseq, resolved_source="unresolved")
             fasta_entry = f">{sanitize_otu_name(f'{qseqid}_{accessionID}_{record.taxonomic_name}_{pident:.2f}')}\n{qseq}\n"
             return fasta_entry, record.to_csv_row()
 

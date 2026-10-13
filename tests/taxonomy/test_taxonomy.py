@@ -68,8 +68,8 @@ def test_gbif_success_and_fasta_csv_metadata_alignment(tmp_path, monkeypatch):
 
     parsed_csv = pd.read_csv(csv_path)
     fasta_record = next(SeqIO.parse(fasta_path, "fasta"))
-    assert list(parsed_csv.columns[:9]) == [
-        "qseqid", "accessionID", "class", "order", "family", "taxonomic_name", "pident", "qseq", "source"
+    assert list(parsed_csv.columns[:8]) == [
+        "qseqid", "accessionID", "class", "order", "family", "taxonomic_name", "pident", "qseq"
     ]
     assert set(CSV_COLUMNS) == set(parsed_csv.columns)
     assert len(parsed_csv) == 1
@@ -93,7 +93,7 @@ def test_gbif_failure_falls_back_to_ncbi(tmp_path, monkeypatch):
     _, csv_entry = module["process_row"](0, module["df"].iloc[0])
 
     assert csv_entry[5] == "Mock species"
-    assert csv_entry[8] == "NCBI"
+    assert dict(zip(CSV_COLUMNS, csv_entry))["resolved_source"] == "NCBI_lineage_fallback"
 
 
 def test_gbif_missing_required_taxonomy_uses_fallback(tmp_path, monkeypatch):
@@ -116,7 +116,7 @@ def test_gbif_missing_required_taxonomy_uses_fallback(tmp_path, monkeypatch):
     _, csv_entry = module["process_row"](0, module["df"].iloc[0])
 
     assert csv_entry[5] == "Mock species"
-    assert csv_entry[8] == "NCBI"
+    assert dict(zip(CSV_COLUMNS, csv_entry))["resolved_source"] == "NCBI_lineage_fallback"
 
 
 def test_ncbi_failure_returns_current_uncertain_taxonomy_behavior(tmp_path, monkeypatch):
@@ -129,7 +129,7 @@ def test_ncbi_failure_returns_current_uncertain_taxonomy_behavior(tmp_path, monk
     _, csv_entry = module["process_row"](0, module["df"].iloc[0])
 
     assert csv_entry[5] == "Uncertain_taxonomy"
-    assert csv_entry[8] == "NCBI Failed"
+    assert dict(zip(CSV_COLUMNS, csv_entry))["resolved_source"] == "unresolved"
 
 
 def test_ncbi_taxid_is_resolved_by_rank_name_and_saved_separately(phylo_module):
@@ -186,7 +186,7 @@ def test_ncbi_first_resolution_records_rank_conflicts(phylo_module):
     assert values["gbif_genus"] == "Pelophylax"
     assert values["taxonomy_conflict"] == "true"
     assert values["taxonomy_conflict_ranks"] == "genus;species"
-    assert values["source"] == "NCBI"
+    assert "source" not in values
 
 
 def test_ncbi_taxonomy_failure_uses_gbif_as_whole_record_fallback(phylo_module):
@@ -374,7 +374,7 @@ def test_ncbi_fallback_uses_positions_in_mock_lineage(phylo_module, monkeypatch,
     row = pd.Series({"qseqid": "q1", "sallacc": "ACC1", "pident": pident, "qseq": "ATGC"})
     _, entry = phylo_module["process_row"](0, row)
     assert entry[2:6] == ["Insecta", "Ordera", "Familya", expected]
-    assert entry[8] == "NCBI"
+    assert dict(zip(CSV_COLUMNS, entry))["resolved_source"] == "NCBI_lineage_fallback"
     assert get.call_count == 3
 
 
@@ -387,7 +387,7 @@ def test_both_services_unavailable_short_circuits_after_ncbi_retries(phylo_modul
     monkeypatch.setattr(phylo_module["time"], "sleep", sleep)
 
     fasta, entry = phylo_module["process_row"](0, phylo_module["df"].iloc[0])
-    assert entry[:9] == ["q1", "ACC1", None, None, None, "Uncertain_taxonomy", 99.0, "ATGC", "NCBI Failed"]
+    assert entry[:8] == ["q1", "ACC1", None, None, None, "Uncertain_taxonomy", 99.0, "ATGC"]
     values = dict(zip(CSV_COLUMNS, entry))
     assert values["resolved_source"] == "unresolved"
     assert values["taxonomy_conflict"] == "false"
@@ -410,8 +410,8 @@ def test_taxonomy_pipeline_writes_matching_csv_and_fasta(phylo_module):
     csv_path = Path(phylo_module["taxonomy_dir"]) / "taxonomic_data.csv"
     with csv_path.open(newline="") as handle:
         reader = csv.DictReader(handle)
-        assert list(reader.fieldnames[:9]) == [
-            "qseqid", "accessionID", "class", "order", "family", "taxonomic_name", "pident", "qseq", "source"
+        assert list(reader.fieldnames[:8]) == [
+            "qseqid", "accessionID", "class", "order", "family", "taxonomic_name", "pident", "qseq"
         ]
         assert set(reader.fieldnames) == set(CSV_COLUMNS)
         rows = {row["qseqid"]: row for row in reader}
@@ -427,7 +427,7 @@ def test_taxonomy_pipeline_writes_matching_csv_and_fasta(phylo_module):
         assert rows[qseqid]["accessionID"] == accession
         assert rows[qseqid]["taxonomic_name"] == name
         assert rows[qseqid]["qseq"] == sequence
-        assert rows[qseqid]["source"] == "GBIF"
+        assert rows[qseqid]["resolved_source"] == "GBIF"
 
 
 def test_ncbi_limiter_is_shared_across_threads(monkeypatch):
