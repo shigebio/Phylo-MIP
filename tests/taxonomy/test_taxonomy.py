@@ -12,7 +12,7 @@ from Bio import SeqIO
 
 from conftest import FIXTURES, load_phylo_module, write_blast_csv
 from unittest.mock import Mock
-from phylomip.taxonomy import CSV_COLUMNS, NCBIRequestLimiter, TaxonomyProcessor
+from phylomip.taxonomy import CSV_COLUMNS, NCBIRequestLimiter, TAXONOMY_RANKS, TaxonomyProcessor
 import phylomip.taxonomy as taxonomy_module
 
 
@@ -153,6 +153,9 @@ def test_ncbi_taxid_is_resolved_by_rank_name_and_saved_separately(phylo_module):
     values = dict(zip(CSV_COLUMNS, entry))
     assert TaxonomyProcessor.extract_ncbi_taxid(records) == "123"
     assert values["ncbi_taxid"] == "123"
+    assert TAXONOMY_RANKS == ("class", "order", "family", "genus", "species")
+    assert "ncbi_kingdom" not in values
+    assert "ncbi_phylum" not in values
     assert values["ncbi_class"] == "Amphibia"
     assert values["resolved_species"] == "Rana temporaria"
     assert values["resolved_source"] == "NCBI"
@@ -309,8 +312,9 @@ def test_fetch_ncbi_taxonomy_parses_rank_names_and_uses_cache(tmp_path, monkeypa
     first = processor.fetch_ncbi_taxonomy("123")
     second = processor.fetch_ncbi_taxonomy("123")
 
-    assert first["kingdom"] == "Animalia"
     assert first["class"] == "Amphibia"
+    assert "kingdom" not in first
+    assert "phylum" not in first
     assert first["genus"] == "Rana"
     assert first["species"] == "Rana temporaria"
     assert second == first
@@ -349,6 +353,19 @@ def test_gbif_response_is_parsed_and_retries_until_success(phylo_module, monkeyp
     assert get.call_count == 2
     get.assert_called_with("https://api.gbif.org/v1/species/match?name=Mock species", timeout=30)
     sleep.assert_called_once_with(1)
+
+
+def test_gbif_kingdom_and_phylum_are_not_retained(phylo_module, monkeypatch):
+    # 表記揺れのある上位rankをGBIF結果へ保持しないことを確認する。
+    response = {
+        "kingdom": "Animalia", "phylum": "Chordata", "class": "Amphibia",
+        "order": "Anura", "family": "Ranidae", "genus": "Rana", "species": "Rana temporaria",
+    }
+    monkeypatch.setattr(phylo_module["requests"], "get", Mock(return_value=Mock(status_code=200, json=lambda: response)))
+    result = phylo_module["get_gbif_taxonomic_info"]("Mock species")
+    assert result["class"] == "Amphibia"
+    assert "kingdom" not in result
+    assert "phylum" not in result
 
 
 @pytest.mark.parametrize("response", [{}, {"order": None}])

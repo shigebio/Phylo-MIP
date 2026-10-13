@@ -23,7 +23,8 @@ Entrez.tool = os.environ.get("NCBI_TOOL", "Phylo-MIP")
 if os.environ.get("NCBI_API_KEY"):
     Entrez.api_key = os.environ["NCBI_API_KEY"]
 
-TAXONOMY_RANKS = ("kingdom", "phylum", "class", "order", "family", "genus", "species")
+# 表記揺れの大きいkingdom/phylumは保持せず、class以下を正式なtaxonomy schemaとする。
+TAXONOMY_RANKS = ("class", "order", "family", "genus", "species")
 LEGACY_COLUMNS = (
     "qseqid", "accessionID", "class", "order", "family", "taxonomic_name", "pident", "qseq"
 )
@@ -369,9 +370,6 @@ class TaxonomyProcessor:
                         result = {"source": "GBIF"}
                         for rank in ("species", "genus", "family", "order", "class"):
                             result[rank] = data.get(rank)
-                        for rank in ("kingdom", "phylum"):
-                            if rank in data:
-                                result[rank] = data.get(rank)
                         optional = {
                             "gbif_status": data.get("status"),
                             "gbif_match_type": data.get("matchType"),
