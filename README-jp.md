@@ -49,7 +49,7 @@
 ## How to Use Phylo-MIP
 **実行の前に**
 Phylo-MIP.pyはNCBIおよびGBIFのAPIを利用しています。[NCBI](https://blast.ncbi.nlm.nih.gov/doc/blast-help/developerinfo.html#developerinfo)と[GBIF](https://techdocs.gbif.org/en/openapi/v1/species)のAPIガイドラインを参照してください。
-可能な限り、初回実効の前に[こちらのコード](https://github.com/shigebio/Phylo-MIP/blob/main/app/Phylo-MIP.py#L22)のメールアドレスを自身のものに書き換えい。
+実行前に、NCBIからの連絡を受け取れるアドレスを`NCBI_EMAIL`環境変数へ設定してください。必要に応じて`NCBI_API_KEY`でNCBIのAPI keyを指定し、`NCBI_TOOL`でクライアント名を指定できます（既定値: `Phylo-MIP`）。taxonomy取得は全スレッドで共有する要求間隔と一時的な失敗へのretryを使用し、`NCBI_REQUEST_INTERVAL`でより保守的な間隔へ変更できます。
 
 NCBIのガイドラインより一部抜粋
 >- Do not contact the server more often than once every 10 seconds.

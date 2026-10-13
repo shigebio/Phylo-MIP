@@ -51,7 +51,7 @@ Designed for phylogenetic analysis using environmental DNA and more ...
 ## How to Use Phylo-MIP
 **Before you run**
 Phylo-MIP.py uses NCBI and GBIF APIs. Please refer to the [NCBI](https://blast.ncbi.nlm.nih.gov/doc/blast-help/developerinfo.html#developerinfo) and [GBIF](https://techdocs.gbif.org/en/openapi/v1/species) API guidelines.
-Before running for the first time, as much as possible, please change the example email address in [this code](https://github.com/shigebio/Phylo-MIP/blob/main/app/Phylo-MIP.py#L22) to your own.
+Set `NCBI_EMAIL` to an address that can receive NCBI contact messages before a live run. `NCBI_API_KEY` may be set for the higher NCBI request limit, and `NCBI_TOOL` can identify the client (default: `Phylo-MIP`). The taxonomy client applies a shared request interval and retries temporary failures; `NCBI_REQUEST_INTERVAL` can be used to make the interval more conservative.
 
 Part of the NCBI guidelines
 >- Do not contact the server more often than once every 10 seconds.
