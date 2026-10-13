@@ -53,6 +53,19 @@ Designed for phylogenetic analysis using environmental DNA and more ...
 Phylo-MIP.py uses NCBI and GBIF APIs. Please refer to the [NCBI](https://blast.ncbi.nlm.nih.gov/doc/blast-help/developerinfo.html#developerinfo) and [GBIF](https://techdocs.gbif.org/en/openapi/v1/species) API guidelines.
 Set `NCBI_EMAIL` to an address that can receive NCBI contact messages before a live run. `NCBI_API_KEY` may be set for the higher NCBI request limit, and `NCBI_TOOL` can identify the client (default: `Phylo-MIP`). The taxonomy client applies a shared request interval and retries temporary failures; `NCBI_REQUEST_INTERVAL` can be used to make the interval more conservative.
 
+For a single shell session, set the variables before running the launcher:
+```bash
+export NCBI_EMAIL="you@example.org"
+export NCBI_TOOL="Phylo-MIP"
+# Optional: export NCBI_API_KEY="your_api_key"
+./phylo-mip ./path/to/your_input.csv --tree
+```
+To keep the setting for future sessions, add the `export` lines yourself to the shell profile you use (for example `~/.bashrc` or `~/.zshrc`), then start a new shell or run `source ~/.bashrc`. Verify the email without printing the API key:
+```bash
+printf 'NCBI_EMAIL=%s\n' "$NCBI_EMAIL"
+test -n "$NCBI_API_KEY" && echo "NCBI_API_KEY is set"
+```
+
 Part of the NCBI guidelines
 >- Do not contact the server more often than once every 10 seconds.
 >- Do not poll for any single RID more often than once a minute.
