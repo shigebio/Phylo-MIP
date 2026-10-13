@@ -447,6 +447,150 @@ def test_taxonomy_pipeline_writes_matching_csv_and_fasta(phylo_module):
         assert rows[qseqid]["resolved_source"] == "GBIF"
 
 
+def test_duplicate_accession_is_fetched_once_but_all_edna_queries_are_preserved(tmp_path):
+    # 同一accessionのlookupだけをdeduplicateし、各eDNA queryのCSV/FASTA rowを保持する。
+    # Deduplicate reference lookups while preserving every eDNA query row.
+    processor = TaxonomyProcessor(tmp_path, ncbi_limiter=NCBIRequestLimiter(interval=0))
+    dataframe = pd.DataFrame([
+        {"qseqid": "q1", "sallacc": "ACC1.1", "pident": 99.0, "qseq": "AAAA"},
+        {"qseqid": "q2", "sallacc": "ACC1.1", "pident": 97.0, "qseq": "AATA"},
+        {"qseqid": "q3", "sallacc": "ACC2.1", "pident": 96.0, "qseq": "CCCC"},
+    ])
+    nucleotide_calls, taxonomy_calls = [], []
+    nucleotide_records = {
+        "ACC1.1": [{
+            "GBSeq_accession-version": "ACC1.1", "GBSeq_organism": "Rana temporaria",
+            "GBSeq_feature-table": [{"GBFeature_quals": [
+                {"GBQualifier_name": "db_xref", "GBQualifier_value": "taxon:100"}
+            ]}],
+        }],
+        "ACC2.1": [{
+            "GBSeq_accession-version": "ACC2.1", "GBSeq_organism": "Dryophytes japonicus",
+            "GBSeq_feature-table": [{"GBFeature_quals": [
+                {"GBQualifier_name": "db_xref", "GBQualifier_value": "taxon:200"}
+            ]}],
+        }],
+    }
+    taxonomy_records = {
+        "100": {"class": "Amphibia", "order": "Anura", "family": "Ranidae",
+                 "genus": "Rana", "species": "Rana temporaria"},
+        "200": {"class": "Amphibia", "order": "Anura", "family": "Hylidae",
+                 "genus": "Dryophytes", "species": "Dryophytes japonicus"},
+    }
+
+    def fetch_nucleotide(accession):
+        if accession in processor.cache:
+            return processor.cache[accession]
+        nucleotide_calls.append(accession)
+        processor.cache[accession] = nucleotide_records[accession]
+        return nucleotide_records[accession]
+
+    def fetch_taxonomy(taxid):
+        taxid = str(taxid)
+        if taxid in processor.taxonomy_cache:
+            return processor.taxonomy_cache[taxid]
+        taxonomy_calls.append(taxid)
+        processor.taxonomy_cache[taxid] = taxonomy_records[taxid]
+        return processor.taxonomy_cache[taxid]
+
+    processor.fetch_ncbi_data = fetch_nucleotide
+    processor.fetch_ncbi_taxonomy = fetch_taxonomy
+    processor.get_gbif_taxonomic_info = lambda species_name: None
+    fasta_path = processor.process_with_progress(dataframe)
+
+    output_csv = tmp_path / "taxonomic_data.csv"
+    with output_csv.open(newline="", encoding="utf-8") as handle:
+        output_rows = list(csv.DictReader(handle))
+    rows_by_query = {row["qseqid"]: row for row in output_rows}
+    fasta_records = list(SeqIO.parse(fasta_path, "fasta"))
+
+    assert nucleotide_calls == ["ACC1.1", "ACC2.1"]
+    assert taxonomy_calls == ["100", "200"]
+    assert len(output_rows) == 3
+    assert set(rows_by_query) == {"q1", "q2", "q3"}
+    assert [row["qseqid"] for row in output_rows].count("q1") == 1
+    assert [row["qseqid"] for row in output_rows].count("q2") == 1
+    assert [row["qseqid"] for row in output_rows].count("q3") == 1
+    assert rows_by_query["q1"]["pident"] == "99.0"
+    assert rows_by_query["q1"]["qseq"] == "AAAA"
+    assert rows_by_query["q1"]["taxonomic_name"] == "Rana temporaria"
+    assert rows_by_query["q2"]["pident"] == "97.0"
+    assert rows_by_query["q2"]["qseq"] == "AATA"
+    assert rows_by_query["q2"]["taxonomic_name"] == "Rana"
+    assert rows_by_query["q3"]["taxonomic_name"] == "Dryophytes"
+    assert len(fasta_records) == 3
+    assert any(record.id.startswith("q1_ACC1_1_") for record in fasta_records)
+    assert any(record.id.startswith("q2_ACC1_1_") for record in fasta_records)
+    assert {record.id.split("_", 1)[0] for record in fasta_records} == {"q1", "q2", "q3"}
+    assert set(processor.cache) == {"ACC1.1", "ACC2.1"}
+    assert set(processor.taxonomy_cache) == {"100", "200"}
+
+
+def test_batch_prefetch_deduplicates_accessions_without_deduplicating_queries(tmp_path):
+    # batch pathでも同一accessionのlookupを一回にし、元のquery rowをすべて処理する。
+    # Batch prefetch must deduplicate references without collapsing query rows.
+    processor = TaxonomyProcessor(tmp_path, ncbi_limiter=NCBIRequestLimiter(interval=0))
+    unique_accessions = ["ACC001.1"] + ["ACC{:03d}.1".format(index) for index in range(2, 52)]
+    rows = [
+        {"qseqid": "q_dup1", "sallacc": "ACC001.1", "pident": 99.0, "qseq": "AAAA"},
+        {"qseqid": "q_dup2", "sallacc": "ACC001.1", "pident": 97.0, "qseq": "AATA"},
+        {"qseqid": "q_dup3", "sallacc": "ACC001.1", "pident": 96.0, "qseq": "AATT"},
+    ]
+    rows.extend({
+        "qseqid": "q{:03d}".format(index), "sallacc": accession,
+        "pident": 96.0, "qseq": "CCCC",
+    } for index, accession in enumerate(unique_accessions[1:], start=1))
+    dataframe = pd.DataFrame(rows)
+    history_calls = []
+
+    def history_fetch(db, ids, rettype=None):
+        history_calls.append((db, list(ids), rettype))
+        if db == "nucleotide":
+            return [{
+                "GBSeq_accession-version": accession,
+                "GBSeq_organism": "Rana temporaria",
+                "GBSeq_feature-table": [{"GBFeature_quals": [
+                    {"GBQualifier_name": "db_xref", "GBQualifier_value": "taxon:100"}
+                ]}],
+            } for accession in ids]
+        return [{
+            "TaxId": "100",
+            "LineageEx": [
+                {"Rank": "class", "ScientificName": "Amphibia"},
+                {"Rank": "order", "ScientificName": "Anura"},
+                {"Rank": "family", "ScientificName": "Ranidae"},
+                {"Rank": "genus", "ScientificName": "Rana"},
+            ],
+            "Rank": "species", "ScientificName": "Rana temporaria",
+        }]
+
+    processor._history_fetch = history_fetch
+    processor.get_gbif_taxonomic_info = lambda species_name: None
+    fasta_path = processor.process_with_progress(dataframe)
+
+    nucleotide_history = [call for call in history_calls if call[0] == "nucleotide"]
+    taxonomy_history = [call for call in history_calls if call[0] == "taxonomy"]
+    with (tmp_path / "taxonomic_data.csv").open(newline="", encoding="utf-8") as handle:
+        output_rows = list(csv.DictReader(handle))
+    fasta_records = list(SeqIO.parse(fasta_path, "fasta"))
+
+    assert len(nucleotide_history) == 1
+    assert nucleotide_history[0][1].count("ACC001.1") == 1
+    assert len(nucleotide_history[0][1]) == 51
+    assert len(taxonomy_history) == 1
+    assert taxonomy_history[0][1] == ["100"]
+    assert len(output_rows) == len(dataframe) == 53
+    assert {row["qseqid"] for row in output_rows} == set(dataframe["qseqid"])
+    rows_by_query = {row["qseqid"]: row for row in output_rows}
+    assert rows_by_query["q_dup1"]["taxonomic_name"] == "Rana temporaria"
+    assert rows_by_query["q_dup2"]["taxonomic_name"] == "Rana"
+    assert rows_by_query["q_dup3"]["taxonomic_name"] == "Rana"
+    assert len(fasta_records) == len(dataframe)
+    assert sum(record.id.startswith("q_dup1_") for record in fasta_records) == 1
+    assert sum(record.id.startswith("q_dup2_") for record in fasta_records) == 1
+    assert sum(record.id.startswith("q_dup3_") for record in fasta_records) == 1
+
+
 def test_ncbi_limiter_is_shared_across_threads(monkeypatch):
     # 全スレッドで同じ待機間隔を共有することを確認する / Verify one limiter is shared by all threads.
     limiter = NCBIRequestLimiter(interval=0.4)
