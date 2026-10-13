@@ -3,10 +3,13 @@
 import csv
 import os
 import re
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
+from email.utils import parsedate_to_datetime
 from typing import Optional
+from urllib.error import HTTPError
 
 import pandas as pd
 import requests
@@ -15,7 +18,10 @@ from Bio import Entrez
 from .output import ensure_directory_exists
 
 
-Entrez.email = "your_email@example.com"
+Entrez.email = os.environ.get("NCBI_EMAIL") or None
+Entrez.tool = os.environ.get("NCBI_TOOL", "Phylo-MIP")
+if os.environ.get("NCBI_API_KEY"):
+    Entrez.api_key = os.environ["NCBI_API_KEY"]
 
 TAXONOMY_RANKS = ("kingdom", "phylum", "class", "order", "family", "genus", "species")
 LEGACY_COLUMNS = (
@@ -43,6 +49,30 @@ def _empty_ranks():
 
 def _normalise_taxon_name(value):
     return str(value).strip().casefold() if value is not None else None
+
+
+class NCBIRequestLimiter:
+    """Coordinate the minimum interval between all E-utilities requests."""
+
+    def __init__(self, interval=None):
+        if interval is None:
+            interval = os.environ.get("NCBI_REQUEST_INTERVAL")
+        if interval is None:
+            interval = 0.1 if os.environ.get("NCBI_API_KEY") else 0.4
+        self.interval = max(0.0, float(interval))
+        self._lock = threading.Lock()
+        self._next_request = 0.0
+
+    def wait(self):
+        with self._lock:
+            now = time.monotonic()
+            delay = max(0.0, self._next_request - now)
+            if delay:
+                time.sleep(delay)
+            self._next_request = time.monotonic() + self.interval
+
+
+_GLOBAL_NCBI_LIMITER = NCBIRequestLimiter()
 
 
 @dataclass
@@ -93,24 +123,66 @@ class TaxonomyRecord:
 
 
 class TaxonomyProcessor:
-    def __init__(self, taxonomy_dir, cache=None, taxonomy_cache=None):
+    def __init__(self, taxonomy_dir, cache=None, taxonomy_cache=None, ncbi_limiter=None):
         self.taxonomy_dir = str(taxonomy_dir)
         self.cache = cache if cache is not None else {}
         self.taxonomy_cache = taxonomy_cache if taxonomy_cache is not None else {}
+        self.ncbi_limiter = ncbi_limiter or _GLOBAL_NCBI_LIMITER
+        self.batch_threshold = int(os.environ.get("NCBI_BATCH_THRESHOLD", "100"))
+        self.batch_size = max(1, int(os.environ.get("NCBI_BATCH_SIZE", "100")))
+
+    @staticmethod
+    def _retry_after(exc):
+        headers = getattr(exc, "headers", None)
+        if headers is None:
+            return None
+        value = headers.get("Retry-After")
+        if value is None:
+            return None
+        try:
+            return max(0.0, float(value))
+        except (TypeError, ValueError):
+            try:
+                return max(0.0, parsedate_to_datetime(value).timestamp() - time.time())
+            except (TypeError, ValueError, OverflowError):
+                return None
+
+    def _ncbi_read(self, request, **kwargs):
+        """Run one E-utilities request with shared throttling and retry handling."""
+        for attempt in range(3):
+            handle = None
+            try:
+                self.ncbi_limiter.wait()
+                handle = request(**kwargs)
+                return Entrez.read(handle)
+            except HTTPError as exc:
+                delay = self._retry_after(exc) if exc.code == 429 else None
+                if delay is None:
+                    delay = 2 ** attempt
+                print(f"NCBI API request failed: {exc}. Retrying... ({attempt + 1}/3)")
+                time.sleep(delay)
+            except Exception as exc:
+                print(f"NCBI API request failed: {exc}. Retrying... ({attempt + 1}/3)")
+                time.sleep(2 ** attempt)
+            finally:
+                if handle is not None:
+                    handle.close()
+        return None
 
     def fetch_ncbi_data(self, accessionID):
         if accessionID in self.cache:
             return self.cache[accessionID]
-        for attempt in range(3):
-            try:
-                handle = Entrez.efetch(db="nucleotide", id=accessionID, rettype="gb", retmode="xml")
-                records = Entrez.read(handle)
-                handle.close()
-                self.cache[accessionID] = records
-                return records
-            except Exception as exc:
-                print(f"NCBI API request failed: {exc}. Retrying... ({attempt + 1}/3)")
-                time.sleep(2 ** attempt)
+        normalized_accession = str(accessionID).split(".", 1)[0]
+        if normalized_accession in self.cache:
+            self.cache[accessionID] = self.cache[normalized_accession]
+            return self.cache[accessionID]
+        records = self._ncbi_read(
+            Entrez.efetch, db="nucleotide", id=accessionID, rettype="gb", retmode="xml"
+        )
+        if records is not None:
+            self.cache[accessionID] = records
+            self.cache[normalized_accession] = records
+            return records
         print(f"Failed to fetch data for accession ID: {accessionID}")
         return None
 
@@ -162,23 +234,109 @@ class TaxonomyProcessor:
         taxid = str(taxid)
         if taxid in self.taxonomy_cache:
             return self.taxonomy_cache[taxid]
-        for attempt in range(3):
-            handle = None
-            try:
-                handle = Entrez.efetch(db="taxonomy", id=taxid, retmode="xml")
-                records = Entrez.read(handle)
-                ranks = self._parse_ncbi_taxonomy(records)
-                if any(value is not None for value in ranks.values()):
-                    self.taxonomy_cache[taxid] = ranks
-                    return ranks
-                raise ValueError("NCBI Taxonomy response did not contain supported ranks")
-            except Exception as exc:
-                print(f"NCBI Taxonomy request failed: {exc}. Retrying... ({attempt + 1}/3)")
-                time.sleep(2 ** attempt)
-            finally:
-                if handle is not None:
-                    handle.close()
+        records = self._ncbi_read(Entrez.efetch, db="taxonomy", id=taxid, retmode="xml")
+        if records is not None:
+            ranks = self._parse_ncbi_taxonomy(records)
+            if any(value is not None for value in ranks.values()):
+                self.taxonomy_cache[taxid] = ranks
+                return ranks
         return None
+
+    @staticmethod
+    def _record_accession(record):
+        if not isinstance(record, dict):
+            return None
+        for key in ("GBSeq_accession-version", "GBSeq_primary-accession", "GBSeq_accession"):
+            value = record.get(key)
+            if value:
+                return str(value).split(".", 1)[0]
+        return None
+
+    @staticmethod
+    def _record_taxid(record):
+        return TaxonomyProcessor.extract_ncbi_taxid([record])
+
+    def _history_fetch(self, db, ids, rettype=None):
+        """Fetch records in batches through Entrez History, returning partial results."""
+        ids = list(dict.fromkeys(str(value) for value in ids if value))
+        if not ids:
+            return []
+        history = self._ncbi_read(Entrez.epost, db=db, id=",".join(ids))
+        if not isinstance(history, dict):
+            return []
+        webenv = history.get("WebEnv")
+        query_key = history.get("QueryKey")
+        if not webenv or not query_key:
+            return []
+        records = []
+        for start in range(0, len(ids), self.batch_size):
+            kwargs = {
+                "db": db, "query_key": query_key, "WebEnv": webenv,
+                "retmode": "xml", "retstart": start, "retmax": self.batch_size,
+            }
+            if rettype:
+                kwargs["rettype"] = rettype
+            batch = self._ncbi_read(Entrez.efetch, **kwargs)
+            if batch is None:
+                break
+            if isinstance(batch, (list, tuple)):
+                records.extend(batch)
+            else:
+                records.append(batch)
+        return records
+
+    def _prefetch_nucleotide_batch(self, accessions):
+        records = self._history_fetch("nucleotide", accessions, rettype="gb")
+        found = set()
+        for record in records:
+            accession = self._record_accession(record)
+            if accession:
+                self.cache[accession] = [record]
+                found.add(accession)
+        return set(str(value).split(".", 1)[0] for value in accessions) - found
+
+    def _prefetch_taxonomy_batch(self, taxids):
+        records = self._history_fetch("taxonomy", taxids)
+        found = set()
+        for record in records:
+            if isinstance(record, dict):
+                taxid = record.get("TaxId") or record.get("TaxID")
+                if taxid:
+                    taxid = str(taxid)
+                    ranks = self._parse_ncbi_taxonomy([record])
+                    if any(value is not None for value in ranks.values()):
+                        self.taxonomy_cache[taxid] = ranks
+                        found.add(taxid)
+        return set(str(value) for value in taxids) - found
+
+    def prepare_ncbi_data(self, df):
+        """Deduplicate and prefetch NCBI records before threaded row processing."""
+        accessions = list(dict.fromkeys(
+            str(value).split(".", 1)[0] for value in df["sallacc"].dropna().tolist()
+        ))
+        if len(accessions) * 2 > self.batch_threshold:
+            missing = self._prefetch_nucleotide_batch(accessions)
+            for accession in missing:
+                self.fetch_ncbi_data(accession)
+        else:
+            for accession in accessions:
+                self.fetch_ncbi_data(accession)
+
+        taxids = []
+        for accession in accessions:
+            records = self.cache.get(accession)
+            if records:
+                taxid = self._record_taxid(records[0])
+                if taxid:
+                    taxids.append(taxid)
+        taxids = list(dict.fromkeys(taxids))
+        if len(accessions) * 2 > self.batch_threshold:
+            missing_taxids = self._prefetch_taxonomy_batch(taxids)
+            for taxid in missing_taxids:
+                self.fetch_ncbi_taxonomy(taxid)
+        else:
+            for taxid in taxids:
+                self.fetch_ncbi_taxonomy(taxid)
 
     def get_gbif_taxonomic_info(self, species_name):
         url = f"https://api.gbif.org/v1/species/match?name={species_name}"
@@ -325,6 +483,7 @@ class TaxonomyProcessor:
     def process_with_progress(self, df, filter_class=None):
         processed_rows, total_rows = 0, len(df)
         fasta_list, csv_data, filtered_fasta_list, filtered_csv_data = [], [], [], []
+        self.prepare_ncbi_data(df)
         with ThreadPoolExecutor(max_workers=5) as executor:
             futures = {executor.submit(self.process_row, index, row): index for index, row in df.iterrows()}
             for future in as_completed(futures):

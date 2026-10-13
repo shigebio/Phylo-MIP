@@ -3,6 +3,8 @@
 import csv
 import io
 import json
+from concurrent.futures import ThreadPoolExecutor
+from urllib.error import HTTPError
 
 import pandas as pd
 import pytest
@@ -10,7 +12,7 @@ from Bio import SeqIO
 
 from conftest import FIXTURES, load_phylo_module, write_blast_csv
 from unittest.mock import Mock
-from phylomip.taxonomy import CSV_COLUMNS, TaxonomyProcessor
+from phylomip.taxonomy import CSV_COLUMNS, NCBIRequestLimiter, TaxonomyProcessor
 import phylomip.taxonomy as taxonomy_module
 
 
@@ -425,3 +427,154 @@ def test_taxonomy_pipeline_writes_matching_csv_and_fasta(phylo_module):
         assert rows[qseqid]["taxonomic_name"] == name
         assert rows[qseqid]["qseq"] == sequence
         assert rows[qseqid]["source"] == "GBIF"
+
+
+def test_ncbi_limiter_is_shared_across_threads(monkeypatch):
+    # 全スレッドで同じ待機間隔を共有することを確認する / Verify one limiter is shared by all threads.
+    limiter = NCBIRequestLimiter(interval=0.4)
+    sleeps = Mock()
+    monkeypatch.setattr(taxonomy_module.time, "monotonic", lambda: 0.0)
+    monkeypatch.setattr(taxonomy_module.time, "sleep", sleeps)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        list(executor.map(lambda _: limiter.wait(), range(2)))
+    assert sleeps.call_count == 1
+    assert sleeps.call_args.args == (0.4,)
+
+
+def test_nucleotide_and_taxonomy_requests_use_combined_limiter(tmp_path, monkeypatch):
+    # nucleotide/taxonomyを別々に数えず共通制限することを確認する / Verify combined throttling.
+    processor = TaxonomyProcessor(tmp_path, ncbi_limiter=NCBIRequestLimiter(interval=0.4))
+    sleeps = Mock()
+    monkeypatch.setattr(taxonomy_module.time, "monotonic", lambda: 0.0)
+    monkeypatch.setattr(taxonomy_module.time, "sleep", sleeps)
+
+    class Handle:
+        def close(self):
+            pass
+
+    monkeypatch.setattr(taxonomy_module.Entrez, "efetch", Mock(return_value=Handle()))
+    monkeypatch.setattr(taxonomy_module.Entrez, "read", Mock(side_effect=[
+        ncbi_record(), [{"Rank": "species", "ScientificName": "Mock species"}]
+    ]))
+    processor.fetch_ncbi_data("ACC1")
+    processor.fetch_ncbi_taxonomy("123")
+    assert sleeps.call_count == 1
+    assert sleeps.call_args.args == (0.4,)
+
+
+def test_prepare_ncbi_data_deduplicates_accessions_and_taxids(tmp_path):
+    # 重複accession/TaxIDの取得を一度に抑えることを確認する / Verify request deduplication.
+    processor = TaxonomyProcessor(tmp_path, ncbi_limiter=NCBIRequestLimiter(interval=0))
+    rows = pd.DataFrame([
+        {"sallacc": "ACC1", "qseqid": "q1"},
+        {"sallacc": "ACC1", "qseqid": "q2"},
+        {"sallacc": "ACC2", "qseqid": "q3"},
+    ])
+    nucleotide_calls, taxonomy_calls = [], []
+
+    def fetch_data(accession):
+        nucleotide_calls.append(accession)
+        records = [{"GBSeq_organism": "Mock", "GBSeq_feature-table": [
+            {"GBFeature_quals": [{"GBQualifier_name": "db_xref", "GBQualifier_value": "taxon:1"}]}
+        ]}]
+        processor.cache[accession] = records
+        return records
+
+    def fetch_taxonomy(taxid):
+        taxonomy_calls.append(taxid)
+        processor.taxonomy_cache[str(taxid)] = {"class": "Insecta"}
+        return processor.taxonomy_cache[str(taxid)]
+
+    processor.fetch_ncbi_data = fetch_data
+    processor.fetch_ncbi_taxonomy = fetch_taxonomy
+    processor.prepare_ncbi_data(rows)
+    assert nucleotide_calls == ["ACC1", "ACC2"]
+    assert taxonomy_calls == ["1"]
+
+
+def test_prepare_ncbi_data_uses_batch_and_falls_back_for_partial_results(tmp_path):
+    # 大規模入力のHistory batchと未取得分の個別fallbackを確認する / Verify batch mode and partial fallback.
+    processor = TaxonomyProcessor(tmp_path, ncbi_limiter=NCBIRequestLimiter(interval=0))
+    rows = pd.DataFrame([{"sallacc": "ACC{:03d}".format(i)} for i in range(51)])
+    batch_accessions, direct_accessions, batch_taxids, direct_taxids = [], [], [], []
+
+    def batch_nucleotide(accessions):
+        batch_accessions.append(list(accessions))
+        for accession in accessions[:-1]:
+            processor.cache[accession] = [{
+                "GBSeq_accession-version": accession,
+                "GBSeq_feature-table": [{"GBFeature_quals": [
+                    {"GBQualifier_name": "db_xref", "GBQualifier_value": "taxon:1"}
+                ]}],
+            }]
+        return {accessions[-1]}
+
+    def direct_nucleotide(accession):
+        direct_accessions.append(accession)
+        processor.cache[accession] = [{
+            "GBSeq_accession-version": accession,
+            "GBSeq_feature-table": [{"GBFeature_quals": [
+                {"GBQualifier_name": "db_xref", "GBQualifier_value": "taxon:2"}
+            ]}],
+        }]
+        return processor.cache[accession]
+
+    def batch_taxonomy(taxids):
+        batch_taxids.append(list(taxids))
+        processor.taxonomy_cache["1"] = {"class": "Insecta"}
+        return {"2"}
+
+    def direct_taxonomy(taxid):
+        direct_taxids.append(taxid)
+        processor.taxonomy_cache[str(taxid)] = {"class": "Insecta"}
+        return processor.taxonomy_cache[str(taxid)]
+
+    processor._prefetch_nucleotide_batch = batch_nucleotide
+    processor._prefetch_taxonomy_batch = batch_taxonomy
+    processor.fetch_ncbi_data = direct_nucleotide
+    processor.fetch_ncbi_taxonomy = direct_taxonomy
+    processor.prepare_ncbi_data(rows)
+    assert len(batch_accessions) == 1
+    assert direct_accessions == ["ACC050"]
+    assert batch_taxids == [["1", "2"]]
+    assert direct_taxids == ["2"]
+
+
+def test_batch_records_are_mapped_to_accession_and_taxid_caches(tmp_path):
+    # History batchの応答を各行のcacheへ対応付けることを確認する / Verify batch mapping into caches.
+    processor = TaxonomyProcessor(tmp_path, ncbi_limiter=NCBIRequestLimiter(interval=0))
+    nucleotide = [{
+        "GBSeq_accession-version": "ACC1.1",
+        "GBSeq_feature-table": [{"GBFeature_quals": [
+            {"GBQualifier_name": "db_xref", "GBQualifier_value": "taxon:123"}
+        ]}],
+    }]
+    taxonomy = [{
+        "TaxId": "123",
+        "LineageEx": [{"Rank": "class", "ScientificName": "Insecta"}],
+        "Rank": "species", "ScientificName": "Mock species",
+    }]
+    processor._history_fetch = Mock(side_effect=[nucleotide, taxonomy])
+    assert processor._prefetch_nucleotide_batch(["ACC1", "ACC2"]) == {"ACC2"}
+    assert processor._prefetch_taxonomy_batch(["123", "456"]) == {"456"}
+    assert processor._record_taxid(processor.cache["ACC1"][0]) == "123"
+    assert processor.taxonomy_cache["123"]["class"] == "Insecta"
+    assert processor.taxonomy_cache["123"]["species"] == "Mock species"
+
+
+def test_ncbi_429_honors_retry_after(tmp_path, monkeypatch):
+    # 429時にRetry-Afterを優先することを確認する / Verify Retry-After-aware backoff.
+    processor = TaxonomyProcessor(tmp_path, ncbi_limiter=NCBIRequestLimiter(interval=0))
+    error = HTTPError("https://eutils.ncbi.nlm.nih.gov", 429, "Too Many Requests",
+                      {"Retry-After": "7"}, None)
+
+    class Handle:
+        def close(self):
+            pass
+
+    monkeypatch.setattr(taxonomy_module.Entrez, "efetch", Mock(side_effect=[error, Handle()]))
+    monkeypatch.setattr(taxonomy_module.Entrez, "read", Mock(return_value=ncbi_record()))
+    sleep = Mock()
+    monkeypatch.setattr(taxonomy_module.time, "sleep", sleep)
+    assert processor.fetch_ncbi_data("ACC1") == ncbi_record()
+    assert sleep.call_args_list == [((7.0,), {})]
