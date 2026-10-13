@@ -37,6 +37,15 @@ TAXONOMY_COLUMNS = (
 )
 CSV_COLUMNS = LEGACY_COLUMNS + TAXONOMY_COLUMNS
 
+# NCBIの既定上限（API keyなし3 req/s、あり10 req/s）に対するPhylo-MIPの安全側既定値。
+NCBI_DEFAULT_INTERVAL_WITHOUT_KEY = 0.4  # 2.5 req/sに抑制
+NCBI_DEFAULT_INTERVAL_WITH_KEY = 0.12  # 8.33 req/sに抑制し、10 req/s上限へ余裕を確保
+NCBI_MAX_ATTEMPTS = 3  # 一時的なE-utilities失敗に対する最大試行回数
+NCBI_RETRY_BASE_DELAY = 2  # Retry-Afterがない場合の指数backoffの基底秒数
+# 100はNCBIの規定値ではなく、個別取得推定（accession数×2）が超えた場合の運用閾値。
+NCBI_DEFAULT_BATCH_THRESHOLD = 100
+NCBI_DEFAULT_BATCH_SIZE = 100  # 1回のHistory EFetchで取得する運用上の件数
+
 
 def sanitize_otu_name(name):
     name = re.sub(r"\.", "_", name)
@@ -56,9 +65,20 @@ class NCBIRequestLimiter:
 
     def __init__(self, interval=None):
         if interval is None:
-            interval = os.environ.get("NCBI_REQUEST_INTERVAL")
-        if interval is None:
-            interval = 0.1 if os.environ.get("NCBI_API_KEY") else 0.4
+            default_interval = (
+                NCBI_DEFAULT_INTERVAL_WITH_KEY
+                if os.environ.get("NCBI_API_KEY")
+                else NCBI_DEFAULT_INTERVAL_WITHOUT_KEY
+            )
+            configured_interval = os.environ.get("NCBI_REQUEST_INTERVAL")
+            if configured_interval is None:
+                interval = default_interval
+            else:
+                try:
+                    # 環境変数は既定値より保守的な（長い）間隔だけを受け付ける。
+                    interval = max(default_interval, float(configured_interval))
+                except ValueError:
+                    interval = default_interval
         self.interval = max(0.0, float(interval))
         self._lock = threading.Lock()
         self._next_request = 0.0
@@ -128,8 +148,9 @@ class TaxonomyProcessor:
         self.cache = cache if cache is not None else {}
         self.taxonomy_cache = taxonomy_cache if taxonomy_cache is not None else {}
         self.ncbi_limiter = ncbi_limiter or _GLOBAL_NCBI_LIMITER
-        self.batch_threshold = int(os.environ.get("NCBI_BATCH_THRESHOLD", "100"))
-        self.batch_size = max(1, int(os.environ.get("NCBI_BATCH_SIZE", "100")))
+        # batch threshold/sizeはNCBIの強制値ではなく、Phylo-MIPの運用設定。
+        self.batch_threshold = int(os.environ.get("NCBI_BATCH_THRESHOLD", str(NCBI_DEFAULT_BATCH_THRESHOLD)))
+        self.batch_size = max(1, int(os.environ.get("NCBI_BATCH_SIZE", str(NCBI_DEFAULT_BATCH_SIZE))))
 
     @staticmethod
     def _retry_after(exc):
@@ -149,7 +170,7 @@ class TaxonomyProcessor:
 
     def _ncbi_read(self, request, **kwargs):
         """Run one E-utilities request with shared throttling and retry handling."""
-        for attempt in range(3):
+        for attempt in range(NCBI_MAX_ATTEMPTS):
             handle = None
             try:
                 self.ncbi_limiter.wait()
@@ -158,12 +179,12 @@ class TaxonomyProcessor:
             except HTTPError as exc:
                 delay = self._retry_after(exc) if exc.code == 429 else None
                 if delay is None:
-                    delay = 2 ** attempt
-                print(f"NCBI API request failed: {exc}. Retrying... ({attempt + 1}/3)")
+                    delay = NCBI_RETRY_BASE_DELAY ** attempt
+                print(f"NCBI API request failed: {exc}. Retrying... ({attempt + 1}/{NCBI_MAX_ATTEMPTS})")
                 time.sleep(delay)
             except Exception as exc:
-                print(f"NCBI API request failed: {exc}. Retrying... ({attempt + 1}/3)")
-                time.sleep(2 ** attempt)
+                print(f"NCBI API request failed: {exc}. Retrying... ({attempt + 1}/{NCBI_MAX_ATTEMPTS})")
+                time.sleep(NCBI_RETRY_BASE_DELAY ** attempt)
             finally:
                 if handle is not None:
                     handle.close()
@@ -172,16 +193,16 @@ class TaxonomyProcessor:
     def fetch_ncbi_data(self, accessionID):
         if accessionID in self.cache:
             return self.cache[accessionID]
-        normalized_accession = str(accessionID).split(".", 1)[0]
-        if normalized_accession in self.cache:
-            self.cache[accessionID] = self.cache[normalized_accession]
-            return self.cache[accessionID]
         records = self._ncbi_read(
             Entrez.efetch, db="nucleotide", id=accessionID, rettype="gb", retmode="xml"
         )
         if records is not None:
             self.cache[accessionID] = records
-            self.cache[normalized_accession] = records
+            # 応答のversion付きaccessionも補助keyとして保持する。別versionとは統合しない。
+            for record in records if isinstance(records, (list, tuple)) else [records]:
+                response_accession = self._record_accession(record)
+                if response_accession:
+                    self.cache.setdefault(response_accession, records)
             return records
         print(f"Failed to fetch data for accession ID: {accessionID}")
         return None
@@ -249,7 +270,8 @@ class TaxonomyProcessor:
         for key in ("GBSeq_accession-version", "GBSeq_primary-accession", "GBSeq_accession"):
             value = record.get(key)
             if value:
-                return str(value).split(".", 1)[0]
+                # version付きaccessionはBLAST時点のrecordを特定するため保持する。
+                return str(value)
         return None
 
     @staticmethod
@@ -293,7 +315,7 @@ class TaxonomyProcessor:
             if accession:
                 self.cache[accession] = [record]
                 found.add(accession)
-        return set(str(value).split(".", 1)[0] for value in accessions) - found
+        return set(str(value) for value in accessions) - found
 
     def _prefetch_taxonomy_batch(self, taxids):
         records = self._history_fetch("taxonomy", taxids)
@@ -312,7 +334,7 @@ class TaxonomyProcessor:
     def prepare_ncbi_data(self, df):
         """Deduplicate and prefetch NCBI records before threaded row processing."""
         accessions = list(dict.fromkeys(
-            str(value).split(".", 1)[0] for value in df["sallacc"].dropna().tolist()
+            str(value) for value in df["sallacc"].dropna().tolist()
         ))
         if len(accessions) * 2 > self.batch_threshold:
             missing = self._prefetch_nucleotide_batch(accessions)
@@ -457,7 +479,11 @@ class TaxonomyProcessor:
             else:
                 resolved_ranks, resolved_source = _empty_ranks(), "unresolved"
 
-            legacy_source = "GBIF" if gbif_info else "NCBI"
+            # 旧source列もassignmentに使用したtaxonomy backboneを示す。
+            # lineage fallbackだけは既存利用との互換性のためNCBI表記を維持する。
+            legacy_source = (
+                "NCBI" if resolved_source == "NCBI_lineage_fallback" else resolved_source
+            )
             taxonomic_name = self._taxonomic_name(resolved_ranks, pident)
             record = TaxonomyRecord(
                 qseqid, accessionID, pident, qseq, legacy_source,

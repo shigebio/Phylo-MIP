@@ -49,7 +49,7 @@
 ## How to Use Phylo-MIP
 **実行の前に**
 Phylo-MIP.pyはNCBIおよびGBIFのAPIを利用しています。[NCBI](https://blast.ncbi.nlm.nih.gov/doc/blast-help/developerinfo.html#developerinfo)と[GBIF](https://techdocs.gbif.org/en/openapi/v1/species)のAPIガイドラインを参照してください。
-実行前に、NCBIからの連絡を受け取れるアドレスを`NCBI_EMAIL`環境変数へ設定してください。必要に応じて`NCBI_API_KEY`でNCBIのAPI keyを指定し、`NCBI_TOOL`でクライアント名を指定できます（既定値: `Phylo-MIP`）。taxonomy取得は全スレッドで共有する要求間隔と一時的な失敗へのretryを使用し、`NCBI_REQUEST_INTERVAL`でより保守的な間隔へ変更できます。
+実行前に、NCBIからの連絡を受け取れるアドレスを`NCBI_EMAIL`環境変数へ設定してください。必要に応じて`NCBI_API_KEY`でNCBIのAPI keyを指定し、`NCBI_TOOL`でクライアント名を指定できます（既定値: `Phylo-MIP`）。taxonomy取得は全スレッドで共有する要求間隔と一時的な失敗へのretryを使用し、`NCBI_REQUEST_INTERVAL`でより保守的な間隔へ変更できます（安全側の既定値より短い値は既定値へ補正されます）。
 
 現在のshellで一時的に設定する例です。
 ```bash
@@ -64,11 +64,17 @@ printf 'NCBI_EMAIL=%s\n' "$NCBI_EMAIL"
 test -n "$NCBI_API_KEY" && echo "NCBI_API_KEY is set"
 ```
 
-NCBIのガイドラインより一部抜粋
->- Do not contact the server more often than once every 10 seconds.
->- Do not poll for any single RID more often than once a minute.
->- Use the URL parameter email and tool, so that the NCBI can contact you if there is a problem.
->- Run scripts weekends or between 9 pm and 5 am Eastern time on weekdays if more than 50 searches will be submitted.
+NCBI BLASTサーバーのガイドライン（BLASTリクエスト向け）
+>- 10秒間に1回を超える頻度でサーバーへ接続しないこと。
+>- 同一RIDへ1分間に1回を超える頻度で問い合わせないこと。
+>- 50件を超える検索を送信する場合は、東部時間の週末または平日21時から5時の間にスクリプトを実行すること。
+
+NCBI Entrez E-utilitiesのガイドライン（taxonomy取得向け）
+>- API keyなしでは1秒あたり3リクエストを超えないこと。
+>- API keyありの既定上限は1秒あたり10リクエストであること。
+>- 問題発生時にNCBIから連絡を受けられるよう、emailとtool識別子を設定すること。
+>- Phylo-MIPは安全側の共有間隔として、API keyなしでは0.4秒、ありでは0.12秒を使用すること。
+>- `NCBI_BATCH_THRESHOLD=100`はbatch/history取得へ切り替えるPhylo-MIP独自の運用推定値であり、NCBIが100レコード以上でbatchを必須としているという意味ではないこと。
 ---
 
 1. コマンドの実行

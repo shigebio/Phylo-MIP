@@ -51,7 +51,7 @@ Designed for phylogenetic analysis using environmental DNA and more ...
 ## How to Use Phylo-MIP
 **Before you run**
 Phylo-MIP.py uses NCBI and GBIF APIs. Please refer to the [NCBI](https://blast.ncbi.nlm.nih.gov/doc/blast-help/developerinfo.html#developerinfo) and [GBIF](https://techdocs.gbif.org/en/openapi/v1/species) API guidelines.
-Set `NCBI_EMAIL` to an address that can receive NCBI contact messages before a live run. `NCBI_API_KEY` may be set for the higher NCBI request limit, and `NCBI_TOOL` can identify the client (default: `Phylo-MIP`). The taxonomy client applies a shared request interval and retries temporary failures; `NCBI_REQUEST_INTERVAL` can be used to make the interval more conservative.
+Set `NCBI_EMAIL` to an address that can receive NCBI contact messages before a live run. `NCBI_API_KEY` may be set for the higher NCBI request limit, and `NCBI_TOOL` can identify the client (default: `Phylo-MIP`). The taxonomy client applies a shared request interval and retries temporary failures; `NCBI_REQUEST_INTERVAL` can be used to make the interval more conservative (values below the safe default are clamped).
 
 For a single shell session, set the variables before running the launcher:
 ```bash
@@ -66,11 +66,17 @@ printf 'NCBI_EMAIL=%s\n' "$NCBI_EMAIL"
 test -n "$NCBI_API_KEY" && echo "NCBI_API_KEY is set"
 ```
 
-Part of the NCBI guidelines
+NCBI BLAST server guidelines (for BLAST requests)
 >- Do not contact the server more often than once every 10 seconds.
 >- Do not poll for any single RID more often than once a minute.
->- Use the URL parameter email and tool, so that the NCBI can contact you if there is a problem.
 >- Run scripts weekends or between 9 pm and 5 am Eastern time on weekdays if more than 50 searches will be submitted.
+
+NCBI Entrez E-utilities guidelines (used for taxonomy requests)
+>- Without an API key, do not exceed 3 requests per second.
+>- With an API key, the default limit is 10 requests per second.
+>- Provide an email and tool identifier so NCBI can contact you if there is a problem.
+>- Phylo-MIP uses a conservative shared interval of 0.4 seconds without an API key and 0.12 seconds with an API key.
+>- `NCBI_BATCH_THRESHOLD=100` is a Phylo-MIP operational estimate for switching to batch/history retrieval; it is not an NCBI rule that requires batching at 100 records.
 ---
 
 1. Executing commands

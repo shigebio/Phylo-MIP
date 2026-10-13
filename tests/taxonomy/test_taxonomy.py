@@ -186,6 +186,7 @@ def test_ncbi_first_resolution_records_rank_conflicts(phylo_module):
     assert values["gbif_genus"] == "Pelophylax"
     assert values["taxonomy_conflict"] == "true"
     assert values["taxonomy_conflict_ranks"] == "genus;species"
+    assert values["source"] == "NCBI"
 
 
 def test_ncbi_taxonomy_failure_uses_gbif_as_whole_record_fallback(phylo_module):
@@ -492,6 +493,31 @@ def test_prepare_ncbi_data_deduplicates_accessions_and_taxids(tmp_path):
     assert taxonomy_calls == ["1"]
 
 
+def test_accession_versions_are_deduplicated_and_cached_separately(tmp_path):
+    # accession.versionを保持し、異なるversionを別recordとして扱うことを確認する。
+    processor = TaxonomyProcessor(tmp_path, ncbi_limiter=NCBIRequestLimiter(interval=0))
+    rows = pd.DataFrame([
+        {"sallacc": "ACC1.1"}, {"sallacc": "ACC1.2"}, {"sallacc": "ACC1.1"},
+    ])
+    calls = []
+    records = {
+        "ACC1.1": [{"GBSeq_accession-version": "ACC1.1", "GBSeq_organism": "Version one"}],
+        "ACC1.2": [{"GBSeq_accession-version": "ACC1.2", "GBSeq_organism": "Version two"}],
+    }
+
+    def fetch_data(accession):
+        calls.append(accession)
+        processor.cache[accession] = records[accession]
+        return records[accession]
+
+    processor.fetch_ncbi_data = fetch_data
+    processor.fetch_ncbi_taxonomy = lambda taxid: None
+    processor.prepare_ncbi_data(rows)
+    assert calls == ["ACC1.1", "ACC1.2"]
+    assert processor.cache["ACC1.1"][0]["GBSeq_organism"] == "Version one"
+    assert processor.cache["ACC1.2"][0]["GBSeq_organism"] == "Version two"
+
+
 def test_prepare_ncbi_data_uses_batch_and_falls_back_for_partial_results(tmp_path):
     # 大規模入力のHistory batchと未取得分の個別fallbackを確認する / Verify batch mode and partial fallback.
     processor = TaxonomyProcessor(tmp_path, ncbi_limiter=NCBIRequestLimiter(interval=0))
@@ -554,10 +580,18 @@ def test_batch_records_are_mapped_to_accession_and_taxid_caches(tmp_path):
         "LineageEx": [{"Rank": "class", "ScientificName": "Insecta"}],
         "Rank": "species", "ScientificName": "Mock species",
     }]
-    processor._history_fetch = Mock(side_effect=[nucleotide, taxonomy])
-    assert processor._prefetch_nucleotide_batch(["ACC1", "ACC2"]) == {"ACC2"}
+    second_nucleotide = {
+        "GBSeq_accession-version": "ACC1.2",
+        "GBSeq_feature-table": [{"GBFeature_quals": [
+            {"GBQualifier_name": "db_xref", "GBQualifier_value": "taxon:456"}
+        ]}],
+    }
+    processor._history_fetch = Mock(side_effect=[[nucleotide[0], second_nucleotide], taxonomy])
+    assert processor._prefetch_nucleotide_batch(["ACC1.1", "ACC1.2"]) == set()
     assert processor._prefetch_taxonomy_batch(["123", "456"]) == {"456"}
-    assert processor._record_taxid(processor.cache["ACC1"][0]) == "123"
+    assert set(processor.cache) == {"ACC1.1", "ACC1.2"}
+    assert processor._record_taxid(processor.cache["ACC1.1"][0]) == "123"
+    assert processor._record_taxid(processor.cache["ACC1.2"][0]) == "456"
     assert processor.taxonomy_cache["123"]["class"] == "Insecta"
     assert processor.taxonomy_cache["123"]["species"] == "Mock species"
 
@@ -578,3 +612,31 @@ def test_ncbi_429_honors_retry_after(tmp_path, monkeypatch):
     monkeypatch.setattr(taxonomy_module.time, "sleep", sleep)
     assert processor.fetch_ncbi_data("ACC1") == ncbi_record()
     assert sleep.call_args_list == [((7.0,), {})]
+
+
+def test_ncbi_request_interval_defaults_and_conservative_override(monkeypatch):
+    # API key有無の安全側既定値と、長くするoverrideを確認する。
+    monkeypatch.delenv("NCBI_API_KEY", raising=False)
+    monkeypatch.delenv("NCBI_REQUEST_INTERVAL", raising=False)
+    assert NCBIRequestLimiter().interval == 0.4
+
+    monkeypatch.setenv("NCBI_API_KEY", "test-key")
+    assert NCBIRequestLimiter().interval == 0.12
+    monkeypatch.setenv("NCBI_REQUEST_INTERVAL", "0.8")
+    assert NCBIRequestLimiter().interval == 0.8
+    monkeypatch.setenv("NCBI_REQUEST_INTERVAL", "0.01")
+    assert NCBIRequestLimiter().interval == 0.12
+
+
+def test_readmes_separate_blast_and_entrez_rate_guidance():
+    # BLASTとtaxonomy用Entrezのrate limit説明を混同しないことを確認する。
+    from pathlib import Path
+    project_root = Path(__file__).parents[2]
+    for readme_name in ("README.md", "README-jp.md"):
+        text = (project_root / readme_name).read_text()
+        blast = text.index("BLAST")
+        entrez = text.index("Entrez")
+        assert blast < entrez
+        assert "0.4" in text
+        assert "0.12" in text
+        assert "NCBI_BATCH_THRESHOLD=100" in text
