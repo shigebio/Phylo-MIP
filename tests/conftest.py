@@ -23,7 +23,7 @@ from phylomip.delimitation import extract_species_data, process_ptp_outputs as _
 from phylomip.mptp import run_mptp as _run_mptp
 from phylomip.output import OutputPaths, create_output_directories
 from phylomip.phylogeny import run_fasttree as _run_fasttree
-from phylomip.taxonomy import TaxonomyProcessor
+from phylomip.taxonomy import NCBIRequestLimiter, TaxonomyProcessor
 from phylomip.pipeline import run as run_pipeline
 from phylomip.cli import parse_args
 import phylomip.taxonomy as taxonomy_module
@@ -63,7 +63,8 @@ def load_phylo_module(input_csv, monkeypatch, *arguments):
     import pandas as pd
     paths = OutputPaths.from_input(input_csv)
     create_output_directories(paths)
-    processor = TaxonomyProcessor(paths.taxonomy_dir)
+    # 外部APIのレート制限は専用テストで検証し、通常のfixtureは待ち時間を発生させない。
+    processor = TaxonomyProcessor(paths.taxonomy_dir, ncbi_limiter=NCBIRequestLimiter(interval=0))
     context = {
         "input_file_path": str(input_csv), "timestamp": paths.timestamp,
         "alignment_dir": paths.alignment_dir, "phylogeny_dir": paths.phylogeny_dir,
@@ -75,14 +76,17 @@ def load_phylo_module(input_csv, monkeypatch, *arguments):
     }
     def process_row(index, row):
         processor.fetch_ncbi_data = context["fetch_ncbi_data"]
+        processor.fetch_ncbi_taxonomy = context["fetch_ncbi_taxonomy"]
         processor.get_gbif_taxonomic_info = context["get_gbif_taxonomic_info"]
         return processor.process_row(index, row)
     def process_with_progress(filter_class=None):
         processor.fetch_ncbi_data = context["fetch_ncbi_data"]
+        processor.fetch_ncbi_taxonomy = context["fetch_ncbi_taxonomy"]
         processor.get_gbif_taxonomic_info = context["get_gbif_taxonomic_info"]
         return processor.process_with_progress(context["df"], filter_class)
     context.update({
         "fetch_ncbi_data": processor.fetch_ncbi_data,
+        "fetch_ncbi_taxonomy": processor.fetch_ncbi_taxonomy,
         "get_gbif_taxonomic_info": processor.get_gbif_taxonomic_info,
         "process_row": process_row,
         "process_with_progress": process_with_progress,
