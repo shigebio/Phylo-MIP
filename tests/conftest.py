@@ -75,14 +75,17 @@ def load_phylo_module(input_csv, monkeypatch, *arguments):
     }
     def process_row(index, row):
         processor.fetch_ncbi_data = context["fetch_ncbi_data"]
+        processor.fetch_ncbi_taxonomy = context["fetch_ncbi_taxonomy"]
         processor.get_gbif_taxonomic_info = context["get_gbif_taxonomic_info"]
         return processor.process_row(index, row)
     def process_with_progress(filter_class=None):
         processor.fetch_ncbi_data = context["fetch_ncbi_data"]
+        processor.fetch_ncbi_taxonomy = context["fetch_ncbi_taxonomy"]
         processor.get_gbif_taxonomic_info = context["get_gbif_taxonomic_info"]
         return processor.process_with_progress(context["df"], filter_class)
     context.update({
         "fetch_ncbi_data": processor.fetch_ncbi_data,
+        "fetch_ncbi_taxonomy": processor.fetch_ncbi_taxonomy,
         "get_gbif_taxonomic_info": processor.get_gbif_taxonomic_info,
         "process_row": process_row,
         "process_with_progress": process_with_progress,

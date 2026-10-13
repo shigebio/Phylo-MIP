@@ -10,6 +10,8 @@ from Bio import SeqIO
 
 from conftest import FIXTURES, load_phylo_module, write_blast_csv
 from unittest.mock import Mock
+from phylomip.taxonomy import CSV_COLUMNS, TaxonomyProcessor
+import phylomip.taxonomy as taxonomy_module
 
 
 def ncbi_record(organism="Mock species", taxonomy="cellular organisms; Eukaryota; Animalia; Arthropoda; Insecta; Ordera; Familya; Genusa"):
@@ -64,11 +66,16 @@ def test_gbif_success_and_fasta_csv_metadata_alignment(tmp_path, monkeypatch):
 
     parsed_csv = pd.read_csv(csv_path)
     fasta_record = next(SeqIO.parse(fasta_path, "fasta"))
-    assert {"qseqid", "accessionID", "taxonomic_name", "qseq", "source"} <= set(parsed_csv.columns)
+    assert list(parsed_csv.columns[:9]) == [
+        "qseqid", "accessionID", "class", "order", "family", "taxonomic_name", "pident", "qseq", "source"
+    ]
+    assert set(CSV_COLUMNS) == set(parsed_csv.columns)
     assert len(parsed_csv) == 1
     assert parsed_csv.loc[0, "qseqid"] == "q1"
     assert parsed_csv.loc[0, "accessionID"] == "ACC1"
     assert parsed_csv.loc[0, "taxonomic_name"] == "Species GBIF"
+    assert parsed_csv.loc[0, "resolved_source"] == "GBIF"
+    assert parsed_csv.loc[0, "gbif_species"] == "Species GBIF"
     assert str(fasta_record.seq) == "ATNGC"
     assert fasta_record.id.startswith("q1_ACC1_Species_GBIF_99_50")
 
@@ -123,6 +130,129 @@ def test_ncbi_failure_returns_current_uncertain_taxonomy_behavior(tmp_path, monk
     assert csv_entry[8] == "NCBI Failed"
 
 
+def test_ncbi_taxid_is_resolved_by_rank_name_and_saved_separately(phylo_module):
+    records = [{
+        "GBSeq_organism": "NCBI species",
+        "GBSeq_taxonomy": "legacy; lineage; values",
+        "GBSeq_feature-table": [{
+            "GBFeature_quals": [{"GBQualifier_name": "db_xref", "GBQualifier_value": "taxon:123"}]
+        }],
+    }]
+    ncbi_taxonomy = {
+        "kingdom": "Animalia", "phylum": "Chordata", "class": "Amphibia",
+        "order": "Anura", "family": "Ranidae", "genus": "Rana", "species": "Rana temporaria",
+    }
+    phylo_module["fetch_ncbi_data"] = lambda accession: records
+    phylo_module["fetch_ncbi_taxonomy"] = lambda taxid: ncbi_taxonomy
+    phylo_module["get_gbif_taxonomic_info"] = lambda species: None
+
+    _, entry = phylo_module["process_row"](0, phylo_module["df"].iloc[0])
+
+    values = dict(zip(CSV_COLUMNS, entry))
+    assert TaxonomyProcessor.extract_ncbi_taxid(records) == "123"
+    assert values["ncbi_taxid"] == "123"
+    assert values["ncbi_class"] == "Amphibia"
+    assert values["resolved_species"] == "Rana temporaria"
+    assert values["resolved_source"] == "NCBI"
+    assert values["taxonomic_name"] == "Rana temporaria"
+
+
+def test_ncbi_first_resolution_records_rank_conflicts(phylo_module):
+    records = [{
+        "GBSeq_organism": "NCBI species",
+        "GBSeq_taxonomy": "legacy; lineage; values",
+        "GBSeq_feature-table": [{
+            "GBFeature_quals": [{"GBQualifier_name": "db_xref", "GBQualifier_value": "taxon:456"}]
+        }],
+    }]
+    phylo_module["fetch_ncbi_data"] = lambda accession: records
+    phylo_module["fetch_ncbi_taxonomy"] = lambda taxid: {
+        "class": "Amphibia", "order": "Anura", "family": "Ranidae",
+        "genus": "Rana", "species": "Rana temporaria",
+    }
+    phylo_module["get_gbif_taxonomic_info"] = lambda species: {
+        "source": "GBIF", "class": "Amphibia", "order": "Anura", "family": "Ranidae",
+        "genus": "Pelophylax", "species": "Pelophylax nigromaculatus",
+    }
+
+    _, entry = phylo_module["process_row"](0, phylo_module["df"].iloc[0])
+
+    values = dict(zip(CSV_COLUMNS, entry))
+    assert values["resolved_source"] == "NCBI"
+    assert values["resolved_genus"] == "Rana"
+    assert values["resolved_species"] == "Rana temporaria"
+    assert values["gbif_genus"] == "Pelophylax"
+    assert values["taxonomy_conflict"] == "true"
+    assert values["taxonomy_conflict_ranks"] == "genus;species"
+
+
+def test_ncbi_taxonomy_failure_uses_gbif_as_whole_record_fallback(phylo_module):
+    records = [{
+        "GBSeq_organism": "NCBI species",
+        "GBSeq_taxonomy": "legacy; lineage; values",
+        "GBSeq_feature-table": [{
+            "GBFeature_quals": [{"GBQualifier_name": "db_xref", "GBQualifier_value": "taxon:999"}]
+        }],
+    }]
+    phylo_module["fetch_ncbi_data"] = lambda accession: records
+    phylo_module["fetch_ncbi_taxonomy"] = lambda taxid: None
+    phylo_module["get_gbif_taxonomic_info"] = lambda species: {
+        "source": "GBIF", "class": "Insecta", "order": "Coleoptera", "family": "Carabidae",
+        "genus": "Carabus", "species": "Carabus auratus",
+    }
+
+    _, entry = phylo_module["process_row"](0, phylo_module["df"].iloc[0])
+
+    values = dict(zip(CSV_COLUMNS, entry))
+    assert values["ncbi_taxid"] == "999"
+    assert values["resolved_source"] == "GBIF"
+    assert values["resolved_genus"] == "Carabus"
+    assert values["taxonomic_name"] == "Carabus auratus"
+
+
+def test_ncbi_taxonomy_and_gbif_failure_marks_lineage_fallback(phylo_module):
+    records = [{
+        "GBSeq_organism": "NCBI species",
+        "GBSeq_taxonomy": "cellular organisms; Eukaryota; Animalia; Arthropoda; Insecta; Ordera; Familya; Genusa",
+        "GBSeq_feature-table": [{
+            "GBFeature_quals": [{"GBQualifier_name": "db_xref", "GBQualifier_value": "taxon:1000"}]
+        }],
+    }]
+    phylo_module["fetch_ncbi_data"] = lambda accession: records
+    phylo_module["fetch_ncbi_taxonomy"] = lambda taxid: None
+    phylo_module["get_gbif_taxonomic_info"] = lambda species: None
+
+    _, entry = phylo_module["process_row"](0, phylo_module["df"].iloc[0])
+
+    values = dict(zip(CSV_COLUMNS, entry))
+    assert values["resolved_source"] == "NCBI_lineage_fallback"
+    assert values["resolved_class"] == "Insecta"
+    assert values["resolved_genus"] == "Genusa"
+
+
+def test_missing_rank_is_written_as_blank_without_shifting_later_ranks(phylo_module):
+    phylo_module["fetch_ncbi_data"] = lambda accession: [{
+        "GBSeq_organism": "NCBI species",
+        "GBSeq_taxonomy": "legacy; lineage; values",
+        "GBSeq_feature-table": [{
+            "GBFeature_quals": [{"GBQualifier_name": "db_xref", "GBQualifier_value": "taxon:789"}]
+        }],
+    }]
+    phylo_module["fetch_ncbi_taxonomy"] = lambda taxid: {
+        "class": "Amphibia", "order": None, "family": "Ranidae",
+        "genus": "Rana", "species": "Rana temporaria",
+    }
+    phylo_module["get_gbif_taxonomic_info"] = lambda species: None
+
+    _, entry = phylo_module["process_row"](0, phylo_module["df"].iloc[0])
+
+    values = dict(zip(CSV_COLUMNS, entry))
+    assert values["resolved_class"] == "Amphibia"
+    assert values["resolved_order"] is None
+    assert values["resolved_family"] == "Ranidae"
+    assert values["taxonomic_name"] == "Rana temporaria"
+
+
 def test_fetch_ncbi_retries_then_returns_records(tmp_path, monkeypatch):
     # NCBI retry回数と成功結果を確認する / Verify NCBI retries and eventual success.
     input_path = tmp_path / "input.csv"
@@ -146,6 +276,43 @@ def test_fetch_ncbi_retries_then_returns_records(tmp_path, monkeypatch):
 
     assert module["fetch_ncbi_data"]("ACC1") == ncbi_record()
     assert attempts == ["ACC1", "ACC1", "ACC1"]
+
+
+def test_fetch_ncbi_taxonomy_parses_rank_names_and_uses_cache(tmp_path, monkeypatch):
+    processor = TaxonomyProcessor(tmp_path)
+    calls = []
+
+    class Handle:
+        def close(self):
+            pass
+
+    def efetch(**kwargs):
+        calls.append(kwargs)
+        return Handle()
+
+    taxonomy_response = [{
+        "LineageEx": [
+            {"Rank": "kingdom", "ScientificName": "Animalia"},
+            {"Rank": "class", "ScientificName": "Amphibia"},
+            {"Rank": "genus", "ScientificName": "Rana"},
+        ],
+        "Rank": "species",
+        "ScientificName": "Rana temporaria",
+    }]
+    monkeypatch.setattr(taxonomy_module.Entrez, "efetch", efetch)
+    monkeypatch.setattr(taxonomy_module.Entrez, "read", lambda handle: taxonomy_response)
+    monkeypatch.setattr(taxonomy_module.time, "sleep", lambda seconds: None)
+
+    first = processor.fetch_ncbi_taxonomy("123")
+    second = processor.fetch_ncbi_taxonomy("123")
+
+    assert first["kingdom"] == "Animalia"
+    assert first["class"] == "Amphibia"
+    assert first["genus"] == "Rana"
+    assert first["species"] == "Rana temporaria"
+    assert second == first
+    assert len(calls) == 1
+    assert calls[0] == {"db": "taxonomy", "id": "123", "retmode": "xml"}
 
 
 def test_gbif_request_failure_returns_none_after_retries(tmp_path, monkeypatch):
@@ -217,7 +384,10 @@ def test_both_services_unavailable_short_circuits_after_ncbi_retries(phylo_modul
     monkeypatch.setattr(phylo_module["time"], "sleep", sleep)
 
     fasta, entry = phylo_module["process_row"](0, phylo_module["df"].iloc[0])
-    assert entry == ["q1", "ACC1", "Unknown", "Unknown", "Unknown", "Uncertain_taxonomy", 99.0, "ATGC", "NCBI Failed"]
+    assert entry[:9] == ["q1", "ACC1", None, None, None, "Uncertain_taxonomy", 99.0, "ATGC", "NCBI Failed"]
+    values = dict(zip(CSV_COLUMNS, entry))
+    assert values["resolved_source"] == "unresolved"
+    assert values["taxonomy_conflict"] == "false"
     assert fasta == ">q1_ACC1_Uncertain_taxonomy_99_00\nATGC\n"
     assert fetch.call_count == 3
     assert [call.args for call in sleep.call_args_list] == [(1,), (2,), (4,)]
@@ -237,7 +407,10 @@ def test_taxonomy_pipeline_writes_matching_csv_and_fasta(phylo_module):
     csv_path = Path(phylo_module["taxonomy_dir"]) / "taxonomic_data.csv"
     with csv_path.open(newline="") as handle:
         reader = csv.DictReader(handle)
-        assert reader.fieldnames == ["qseqid", "accessionID", "class", "order", "family", "taxonomic_name", "pident", "qseq", "source"]
+        assert list(reader.fieldnames[:9]) == [
+            "qseqid", "accessionID", "class", "order", "family", "taxonomic_name", "pident", "qseq", "source"
+        ]
+        assert set(reader.fieldnames) == set(CSV_COLUMNS)
         rows = {row["qseqid"]: row for row in reader}
     assert set(rows) == {"q1", "q2"}
     records = list(SeqIO.parse(fasta_path, "fasta"))
